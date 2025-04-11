@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { FileText, Video, Link as LinkIcon, Eye, Download, Clock, ThumbsUp, MessageSquare, Bookmark, Send } from 'lucide-react';
 import { FacultyResource } from '../../types/faculty';
@@ -22,7 +21,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
   const [likesCount, setLikesCount] = useState(resource.stats?.likes || 0);
   const { user } = useAuth();
   
-  // Check if resource is liked and bookmarked on component mount
   useEffect(() => {
     const checkLikeStatus = async () => {
       if (!user) return;
@@ -31,7 +29,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
         const token = localStorage.getItem('token');
         if (!token) return;
         
-        // Check like status
         const likeResponse = await fetch(`/api/resources/${resource.id || resource._id}/like-status`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -43,7 +40,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           setIsLiked(likeData.isLiked);
         }
         
-        // Check bookmark status
         const bookmarkResponse = await fetch(`/api/resources/${resource.id || resource._id}/bookmark-status`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -76,17 +72,15 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
   };
   
   const handleDownload = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     
     try {
-      // Update both view and download stats
       if (resource.id || resource._id) {
         await updateResourceStats('view');
         await updateResourceStats('download');
       }
       
       if (resource.fileUrl) {
-        // Direct download - don't show document viewer
         const a = document.createElement('a');
         a.href = resource.fileUrl;
         a.download = resource.fileName || resource.title || 'download';
@@ -94,7 +88,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
         a.click();
         document.body.removeChild(a);
       } else if (resource.type === 'link' && resource.link) {
-        // If it's a link resource, open the link
         window.open(resource.link, '_blank');
       } else {
         toast.error('No file or link available for download');
@@ -106,14 +99,12 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
   };
   
   const handleView = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     
-    // Update view count
     if (resource.id || resource._id) {
       await updateResourceStats('view');
     }
     
-    // Show document viewer
     setShowDocViewer(true);
   };
   
@@ -124,7 +115,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     }
     
     try {
-      // Update stats in memory
       if (window.sharedResources) {
         const resourceIndex = window.sharedResources.findIndex(r => 
           (r.id === resource.id) || (r._id === resource._id));
@@ -135,7 +125,8 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           } else if (action === 'view') {
             window.sharedResources[resourceIndex].stats.views += 1;
           } else if (action === 'like') {
-            // Don't modify the count here, we'll use the server's response
+            setIsLiked(!isLiked);
+            setLikesCount(resource.stats.likes);
           } else if (action === 'comment') {
             window.sharedResources[resourceIndex].stats.comments += 1;
           }
@@ -143,7 +134,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
         }
       }
       
-      // Update stats in MongoDB
       const response = await api.post('/api/resources/stats', {
         resourceId: resource.id || resource._id,
         action: action,
@@ -158,7 +148,10 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     }
   };
   
-  const handleLike = async () => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
     if (!user) {
       toast.error('Please log in to like resources');
       return;
@@ -166,7 +159,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     
     try {
       setIsLoading(true);
-      // We need to include the token in the headers
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/resources/${resource.id || resource._id}/like`, {
         method: 'POST',
@@ -183,12 +175,10 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       
       const data = await response.json();
       
-      // Update state with the new like status and count from server
       setIsLiked(data.isLiked);
       setLikesCount(data.likesCount);
       toast.success(data.isLiked ? 'Added like' : 'Removed like');
       
-      // Update the stats
       updateResourceStats('like');
     } catch (error) {
       console.error('Failed to like resource:', error);
@@ -209,7 +199,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     try {
       setIsLoading(true);
       
-      // Toggle bookmark status
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/resources/${resource.id || resource._id}/bookmark`, {
         method: 'POST',
@@ -228,11 +217,9 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       const data = await response.json();
       console.log('Bookmark response:', data);
       
-      // Update local state based on server response
       setIsBookmarked(data.bookmarked);
       toast.success(data.bookmarked ? 'Resource bookmarked' : 'Removed from bookmarks');
       
-      // Update the stats
       updateResourceStats('bookmark');
     } catch (error) {
       console.error('Failed to bookmark resource:', error);
@@ -242,7 +229,10 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     }
   };
   
-  const handleToggleComments = async () => {
+  const handleToggleComments = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
     setShowComments(!showComments);
     
     if (!showComments && comments.length === 0) {
@@ -270,7 +260,10 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     }
   };
   
-  const handleAddComment = async () => {
+  const handleAddComment = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
     if (!commentText.trim()) return;
     if (!user) {
       toast.error('Please log in to comment');
@@ -279,7 +272,6 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     
     try {
       setIsLoading(true);
-      // Use fetch with explicit headers instead of axios
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/resources/${resource.id || resource._id}/comments`, {
         method: 'POST',
@@ -312,16 +304,16 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all h-full flex flex-col">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all h-full flex flex-col dark:bg-gray-800 dark:border-gray-700">
       <div className="p-4 flex-1">
         <div className="flex items-start">
-          <div className="bg-indigo-100 p-2 rounded-lg mr-3">
+          <div className="bg-indigo-100 p-2 rounded-lg mr-3 dark:bg-indigo-900">
             {getIcon()}
           </div>
           <div className="flex-1">
-            <h4 className="font-medium text-gray-800 line-clamp-2 mb-1">{resource.title}</h4>
-            <p className="text-sm text-gray-600 line-clamp-2 mb-2">{resource.description}</p>
-            <div className="flex items-center text-xs text-gray-500 mt-2">
+            <h4 className="font-medium text-gray-800 line-clamp-2 mb-1 dark:text-white">{resource.title}</h4>
+            <p className="text-sm text-gray-600 line-clamp-2 mb-2 dark:text-gray-300">{resource.description}</p>
+            <div className="flex items-center text-xs text-gray-500 mt-2 dark:text-gray-400">
               <div className="flex items-center">
                 <Clock className="h-3 w-3 mr-1" />
                 <span>{new Date(resource.uploadDate).toLocaleDateString()}</span>
@@ -336,15 +328,15 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
         </div>
       </div>
       
-      <div className="bg-gray-50 p-3 flex justify-between items-center border-t border-gray-100">
-        <span className="text-xs text-gray-600">
+      <div className="bg-gray-50 p-3 flex justify-between items-center border-t border-gray-100 dark:bg-gray-700 dark:border-gray-600">
+        <span className="text-xs text-gray-600 dark:text-gray-300">
           {resource.subject || 'No subject'}
         </span>
         
         <div className="flex space-x-3">
           <button 
             onClick={handleLike}
-            className={`text-sm ${isLiked ? 'text-blue-600' : 'text-gray-600'} hover:text-blue-700 flex items-center`}
+            className={`text-sm ${isLiked ? 'text-blue-600' : 'text-gray-600 dark:text-gray-300'} hover:text-blue-700 flex items-center`}
             disabled={isLoading}
           >
             <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-blue-600' : ''}`} />
@@ -353,7 +345,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           
           <button 
             onClick={handleToggleComments}
-            className="text-gray-600 hover:text-blue-700 flex items-center"
+            className="text-gray-600 hover:text-blue-700 flex items-center dark:text-gray-300"
           >
             <MessageSquare className="h-4 w-4" />
             <span className="ml-1">{comments.length || resource.stats.comments || 0}</span>
@@ -361,7 +353,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           
           <button 
             onClick={handleBookmark}
-            className={`${isBookmarked ? 'text-yellow-600' : 'text-gray-600'} hover:text-yellow-600`}
+            className={`${isBookmarked ? 'text-yellow-600' : 'text-gray-600 dark:text-gray-300'} hover:text-yellow-600`}
             title={isBookmarked ? "Remove bookmark" : "Bookmark"}
           >
             <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-yellow-500' : ''}`} />
@@ -369,7 +361,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           
           <button 
             onClick={handleView}
-            className="text-indigo-600 hover:text-indigo-700"
+            className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             title="View document"
           >
             <Eye className="h-4 w-4" />
@@ -377,7 +369,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           
           <button 
             onClick={handleDownload}
-            className="text-indigo-600 hover:text-indigo-700"
+            className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             title="Download"
           >
             <Download className="h-4 w-4" />
@@ -386,8 +378,8 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       </div>
       
       {showComments && (
-        <div className="p-3 border-t border-gray-100 bg-gray-50">
-          <h5 className="font-medium text-gray-700 mb-2">Comments</h5>
+        <div className="p-3 border-t border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+          <h5 className="font-medium text-gray-700 mb-2 dark:text-gray-200">Comments</h5>
           
           <div className="flex items-center mb-4">
             <input 
@@ -395,10 +387,10 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 border rounded-l-md py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="flex-1 border rounded-l-md py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             />
             <button 
-              className="bg-indigo-600 text-white py-2 px-3 rounded-r-md hover:bg-indigo-700 disabled:opacity-50"
+              className="bg-indigo-600 text-white py-2 px-3 rounded-r-md hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-700 dark:hover:bg-indigo-600"
               onClick={handleAddComment}
               disabled={isLoading || !commentText.trim()}
             >
@@ -409,29 +401,29 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           {isLoading && comments.length === 0 ? (
             <div className="text-center py-4">
               <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-indigo-600 border-r-transparent"></div>
-              <p className="text-sm text-gray-500 mt-2">Loading comments...</p>
+              <p className="text-sm text-gray-500 mt-2 dark:text-gray-400">Loading comments...</p>
             </div>
           ) : comments.length > 0 ? (
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {comments.map((comment, index) => (
-                <div key={index} className="bg-white p-2 rounded border">
+                <div key={index} className="bg-white p-2 rounded border dark:bg-gray-800 dark:border-gray-600">
                   <div className="flex justify-between items-start">
                     <div className="flex items-start">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-800 font-semibold text-sm">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-800 font-semibold text-sm dark:bg-indigo-900 dark:text-indigo-200">
                         {comment.author?.fullName?.charAt(0) || 'A'}
                       </div>
                       <div className="ml-2">
-                        <p className="text-sm font-medium">{comment.author?.fullName || 'Anonymous'}</p>
-                        <p className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleString()}</p>
+                        <p className="text-sm font-medium dark:text-gray-200">{comment.author?.fullName || 'Anonymous'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(comment.createdAt).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm mt-1">{comment.content}</p>
+                  <p className="text-sm mt-1 dark:text-gray-300">{comment.content}</p>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center py-2">No comments yet. Be the first to comment!</p>
+            <p className="text-sm text-gray-500 text-center py-2 dark:text-gray-400">No comments yet. Be the first to comment!</p>
           )}
         </div>
       )}
@@ -446,4 +438,3 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     </div>
   );
 };
-

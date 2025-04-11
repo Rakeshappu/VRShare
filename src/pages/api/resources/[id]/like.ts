@@ -82,25 +82,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const isLiked = userLikedIndex !== -1;
     const shouldLike = like !== undefined ? like : !isLiked;
     
-    // Get the actual count of likes by counting the likedBy array
-    let likesCount = resource.likedBy.length;
-    
+    // Process the like/unlike action
     if (shouldLike && !isLiked) {
       // Add user to likedBy if not already present
       resource.likedBy.push(userId);
-      likesCount += 1;
-      resource.stats.likes = likesCount;
+      resource.stats.likes = resource.likedBy.length;
+      
+      console.log(`User ${decoded.userId} liked resource ${id}, new likes count: ${resource.stats.likes}`);
       
       // Send notification to faculty if a student likes their resource
-      // Only send notification when a resource is liked, not unliked
       if (resource.uploadedBy && resource.uploadedBy.toString() !== decoded.userId) {
-        notifyFacultyOfInteraction(id, decoded.userId, 'like');
+        notifyFacultyOfInteraction(id as string, decoded.userId, 'like');
       }
     } else if (!shouldLike && isLiked) {
       // Remove user from likedBy
       resource.likedBy.splice(userLikedIndex, 1);
-      likesCount = Math.max(0, likesCount - 1); // Prevent negative likes
-      resource.stats.likes = likesCount;
+      resource.stats.likes = resource.likedBy.length;
+      
+      console.log(`User ${decoded.userId} unliked resource ${id}, new likes count: ${resource.stats.likes}`);
     }
     
     // Save the updated resource
@@ -109,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ 
       success: true,
       message: shouldLike ? 'Resource liked' : 'Resource unliked',
-      likesCount: likesCount,
+      likesCount: resource.stats.likes,
       isLiked: shouldLike
     });
   } catch (error) {

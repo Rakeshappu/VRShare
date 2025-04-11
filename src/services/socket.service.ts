@@ -41,7 +41,7 @@ class SocketService {
 
       // Set up default listeners
       this.socket.on('connect', () => {
-        console.log('Socket connected successfully');
+        console.log('Socket connected successfully with ID:', this.socket?.id);
         this.connectionAttempts = 0;
         this.processNotificationQueue();
       });
@@ -146,19 +146,23 @@ class SocketService {
   
   // Create the actual notification
   private createNotification(data: { title: string, message: string, resourceId?: string }) {
-    const notification = new Notification(data.title, {
-      body: data.message,
-      icon: '/favicon.ico'
-    });
-    
-    notification.onclick = function() {
-      window.focus();
-      notification.close();
-      // Navigate to the resource if resourceId is provided
-      if (data.resourceId) {
-        window.location.href = `/resources/${data.resourceId}`;
-      }
-    };
+    try {
+      const notification = new Notification(data.title, {
+        body: data.message,
+        icon: '/favicon.ico'
+      });
+      
+      notification.onclick = function() {
+        window.focus();
+        notification.close();
+        // Navigate to the resource if resourceId is provided
+        if (data.resourceId) {
+          window.location.href = `/resources/${data.resourceId}`;
+        }
+      };
+    } catch (error) {
+      console.error('Error creating notification:', error);
+    }
   }
 
   // Handle connection errors with retry logic

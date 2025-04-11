@@ -42,10 +42,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
     if (department !== undefined) user.department = department;
     
+    // Track if avatar was updated
+    let avatarUpdated = false;
+    
     // Only update avatar if it's provided and valid
     if (avatar !== undefined && avatar !== '' && avatar !== null) {
       console.log('Updating user avatar to:', avatar);
       user.avatar = avatar;
+      avatarUpdated = true;
     } else {
       console.log('No valid avatar provided, keeping existing avatar');
     }
@@ -55,9 +59,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (degree !== undefined) user.degree = degree;
     
     console.log('Updating user profile with data:', { 
-      fullName, phoneNumber, department, 
-      avatarProvided: !!avatar,
-      gender, batch, degree
+      fullName, 
+      phoneNumber, 
+      department, 
+      avatarUpdated,
+      avatar: avatarUpdated ? 'New avatar provided' : 'No new avatar',
+      gender, 
+      batch, 
+      degree
     });
     
     await user.save();
@@ -67,6 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
+      avatarUpdated, // Add this flag so client knows avatar was updated
       user: {
         _id: user._id,
         fullName: user.fullName,
