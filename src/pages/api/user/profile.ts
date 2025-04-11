@@ -42,10 +42,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
     if (department !== undefined) user.department = department;
     
-    // Only update avatar if it's provided and not an empty string
-    if (avatar !== undefined && avatar !== '') {
-      console.log('Updating user avatar');
+    // Only update avatar if it's provided and valid
+    if (avatar !== undefined && avatar !== '' && avatar !== null) {
+      console.log('Updating user avatar to:', avatar);
       user.avatar = avatar;
+    } else {
+      console.log('No valid avatar provided, keeping existing avatar');
     }
     
     if (gender !== undefined) user.gender = gender;
@@ -61,6 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await user.save();
     console.log('User profile saved successfully');
     
+    // Return updated user data
     return res.status(200).json({
       success: true,
       message: 'Profile updated successfully',

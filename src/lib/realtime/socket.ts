@@ -125,22 +125,17 @@ export const notifyResourceUpload = async (resourceId: string, facultyName: stri
       return;
     }
     
-    let targetSemester: number;
+    let targetSemester: number | null = null;
     
     // If specificSemester was provided (from API), use it
-    if (specificSemester !== undefined) {
+    if (specificSemester !== undefined && specificSemester !== null) {
       targetSemester = Number(specificSemester);
-    } else {
+    } else if (resource.semester !== undefined) {
       // Otherwise use the semester from the resource
       targetSemester = resource.semester;
     }
     
     console.log(`Processing notification for resource in semester ${targetSemester}`);
-    
-    if (targetSemester === undefined && targetSemester !== 0) {
-      console.error('Resource has no semester information:', resourceId);
-      return; // Skip if no semester info
-    }
     
     // For placement resources (semester 0), notify all students
     if (targetSemester === 0) {
@@ -149,25 +144,27 @@ export const notifyResourceUpload = async (resourceId: string, facultyName: stri
       const resourceTitleToUse = resourceTitle || resource.title;
       const notificationMessage = `New placement resource "${resourceTitleToUse}" uploaded by ${facultyName}`;
       
-      // Emit to all users
-      io.emit('new-resource', {
-        message: notificationMessage,
-        resource: {
-          _id: resource._id,
-          title: resourceTitleToUse,
-          subject: resource.subject,
-          semester: resource.semester,
-          type: resource.type,
-          uploadedBy: facultyName
-        },
-        timestamp: new Date()
+      // Emit to all users with role student
+      const students = await User.find({ role: 'student' });
+      console.log(`Found ${students.length} students for placement notification`);
+      
+      students.forEach(student => {
+        emitToUser(student._id.toString(), 'new-resource', {
+          message: notificationMessage,
+          resource: {
+            _id: resource._id,
+            title: resourceTitleToUse,
+            subject: resource.subject,
+            semester: resource.semester,
+            type: resource.type,
+            uploadedBy: facultyName
+          },
+          timestamp: new Date()
+        });
       });
       
       // Store notifications for all students
       try {
-        const students = await User.find({ role: 'student' });
-        console.log(`Found ${students.length} students for placement notification`);
-        
         const resourceObjectId = new mongoose.Types.ObjectId(resourceId);
         
         const notificationObjects = students.map(student => ({
@@ -186,6 +183,12 @@ export const notifyResourceUpload = async (resourceId: string, facultyName: stri
         console.error('Error creating placement notifications:', error);
       }
       
+      return;
+    }
+    
+    // If no valid semester was found, log error and return
+    if (targetSemester === null) {
+      console.error('No valid semester found for resource notification');
       return;
     }
     
@@ -239,8 +242,6 @@ export const notifyResourceUpload = async (resourceId: string, facultyName: stri
         await Notification.insertMany(notificationObjects);
         console.log(`Created ${notificationObjects.length} notifications in the database for semester ${targetSemester}`);
       }
-      
-      console.log(`Notifications sent to ${students.length} students for resource ${resourceTitleToUse}`);
     } catch (error) {
       console.error('Error creating notifications:', error);
     }

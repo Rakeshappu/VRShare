@@ -11,7 +11,7 @@ interface UserBannerProps {
 }
 
 export const UserBanner = ({ user }: UserBannerProps) => {
-  const { user: authUser } = useAuth();
+  const { user: authUser, setUser } = useAuth();
   const [activitiesToday, setActivitiesToday] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showAnimation, setShowAnimation] = useState(false);
@@ -36,6 +36,14 @@ export const UserBanner = ({ user }: UserBannerProps) => {
         
         if (customEvent.detail.avatar) {
           setAvatarUrl(customEvent.detail.avatar);
+          
+          // If this is the auth user, update the auth context as well
+          if (authUser && (!user || user._id === authUser._id)) {
+            setUser({
+              ...authUser,
+              avatar: customEvent.detail.avatar
+            });
+          }
         } else {
           // If avatar isn't in the event but user was updated, recalculate avatar
           setAvatarUrl(getAvatarUrl());
@@ -50,7 +58,7 @@ export const UserBanner = ({ user }: UserBannerProps) => {
     return () => {
       document.removeEventListener('profileUpdated', handleProfileUpdate);
     };
-  }, []);
+  }, [authUser, user]);
 
   // Fetch activities count for today
   useEffect(() => {

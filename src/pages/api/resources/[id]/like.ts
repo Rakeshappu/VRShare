@@ -82,7 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const isLiked = userLikedIndex !== -1;
     const shouldLike = like !== undefined ? like : !isLiked;
     
-    let likesCount = resource.stats.likes || 0;
+    // Get the actual count of likes by counting the likedBy array
+    let likesCount = resource.likedBy.length;
     
     if (shouldLike && !isLiked) {
       // Add user to likedBy if not already present

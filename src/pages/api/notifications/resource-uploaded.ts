@@ -45,28 +45,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!resourceId) {
       return res.status(400).json({ error: 'Resource ID is required' });
     }
-     // Find students in the specified semester
-     const targetStudents = await User.find({ 
-      role: 'student',
-      ...(semester ? { semester: semester } : {})
-    });
+    
     console.log(`API route: sending notification for resource ${resourceId} by ${facultyName || user.fullName} for semester ${semester}`);
     
-    // Create notifications in database for each student
-    const notificationPromises = targetStudents.map(student => {
-      return Notification.createNotification({
-        userId: student._id,
-        message: `New resource "${resourceTitle || 'Untitled'}" uploaded by ${facultyName || user.fullName}`,
-        resourceId
-      });
-    });
-    
-    await Promise.all(notificationPromises);
-    console.log(`Created ${notificationPromises.length} notifications in database`);
-    
-    // Send real-time notification to students - Now specifically passing the semester parameter
+    // We add await here to make sure the promise is resolved
     try {
-      // We add await here to make sure the promise is resolved
       await notifyResourceUpload(resourceId, facultyName || user.fullName, resourceTitle, semester);
       console.log(`Real-time notification sent successfully for resource ${resourceId} to semester ${semester}`);
     } catch (error) {

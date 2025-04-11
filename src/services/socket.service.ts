@@ -1,3 +1,4 @@
+
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
 
@@ -61,8 +62,10 @@ class SocketService {
         // Add more detailed logging to debug notification issues
         if (!data) {
           console.error('Empty notification data received');
+          return;
         } else if (!data.message) {
           console.error('Notification received but missing message field:', data);
+          return;
         }
         
         this.showNotification({
