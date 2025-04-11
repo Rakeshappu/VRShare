@@ -9,9 +9,10 @@ import api from '../../services/api';
 
 interface ResourceItemProps {
   resource: FacultyResource;
+  onLikeUpdate?: (resourceId: string, isLiked: boolean, likesCount: number) => void;
 }
 
-export const ResourceItem = ({ resource }: ResourceItemProps) => {
+export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
   const [showDocViewer, setShowDocViewer] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -21,6 +22,9 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [likesCount, setLikesCount] = useState(resource.stats?.likes || 0);
   const { user } = useAuth();
+  
+  // Unique ID for this component instance - helps ensure comment sections don't interfere with each other
+  const instanceId = resource._id?.toString() || resource.id?.toString() || Math.random().toString();
   
   // Check if resource is liked and bookmarked on component mount
   useEffect(() => {
@@ -32,7 +36,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
         if (!token) return;
         
         // Check like status
-        const likeResponse = await fetch(`/api/resources/${resource.id || resource._id}/like-status`, {
+        const likeResponse = await fetch(`/api/resources/${resource._id || resource.id}/like-status`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -44,7 +48,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
         }
         
         // Check bookmark status
-        const bookmarkResponse = await fetch(`/api/resources/${resource.id || resource._id}/bookmark-status`, {
+        const bookmarkResponse = await fetch(`/api/resources/${resource._id || resource.id}/bookmark-status`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -80,7 +84,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     
     try {
       // Update both view and download stats
-      if (resource.id || resource._id) {
+      if (resource._id || resource.id) {
         await updateResourceStats('view');
         await updateResourceStats('download');
       }
@@ -109,7 +113,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     e.stopPropagation(); // Prevent card click
     
     // Update view count
-    if (resource.id || resource._id) {
+    if (resource._id || resource.id) {
       await updateResourceStats('view');
     }
     
@@ -145,7 +149,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       
       // Update stats in MongoDB
       const response = await api.post('/api/resources/stats', {
-        resourceId: resource.id || resource._id,
+        resourceId: resource._id || resource.id,
         action: action,
         userId: user._id
       });
@@ -168,7 +172,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       setIsLoading(true);
       // We need to include the token in the headers
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/resources/${resource.id || resource._id}/like`, {
+      const response = await fetch(`/api/resources/${resource._id || resource.id}/like`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -190,6 +194,11 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       
       // Update the stats
       updateResourceStats('like');
+      
+      // Notify parent component if callback provided
+      if (onLikeUpdate) {
+        onLikeUpdate(resource._id || resource.id, data.isLiked, data.likesCount);
+      }
     } catch (error) {
       console.error('Failed to like resource:', error);
       toast.error('Failed to update like status');
@@ -211,7 +220,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       
       // Toggle bookmark status
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/resources/${resource.id || resource._id}/bookmark`, {
+      const response = await fetch(`/api/resources/${resource._id || resource.id}/bookmark`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -249,7 +258,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       try {
         setIsLoading(true);
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/resources/${resource.id || resource._id}/comments`, {
+        const response = await fetch(`/api/resources/${resource._id || resource.id}/comments`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -281,7 +290,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
       setIsLoading(true);
       // Use fetch with explicit headers instead of axios
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/resources/${resource.id || resource._id}/comments`, {
+      const response = await fetch(`/api/resources/${resource._id || resource.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,6 +363,7 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
           <button 
             onClick={handleToggleComments}
             className="text-gray-600 hover:text-blue-700 flex items-center"
+            data-resource-id={instanceId} // Adding a resource-specific identifier
           >
             <MessageSquare className="h-4 w-4" />
             <span className="ml-1">{comments.length || resource.stats.comments || 0}</span>
@@ -446,4 +456,3 @@ export const ResourceItem = ({ resource }: ResourceItemProps) => {
     </div>
   );
 };
-

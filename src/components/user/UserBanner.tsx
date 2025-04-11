@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Award, Calendar } from 'lucide-react';
 import { User } from '../../types';
@@ -11,7 +12,7 @@ interface UserBannerProps {
 }
 
 export const UserBanner = ({ user }: UserBannerProps) => {
-  const { user: authUser, setUser } = useAuth();
+  const { user: authUser } = useAuth();
   const [activitiesToday, setActivitiesToday] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showAnimation, setShowAnimation] = useState(false);
@@ -36,14 +37,6 @@ export const UserBanner = ({ user }: UserBannerProps) => {
         
         if (customEvent.detail.avatar) {
           setAvatarUrl(customEvent.detail.avatar);
-          
-          // If this is the auth user, update the auth context as well
-          if (authUser && (!user || user._id === authUser._id)) {
-            setUser({
-              ...authUser,
-              avatar: customEvent.detail.avatar
-            });
-          }
         } else {
           // If avatar isn't in the event but user was updated, recalculate avatar
           setAvatarUrl(getAvatarUrl());
@@ -52,11 +45,11 @@ export const UserBanner = ({ user }: UserBannerProps) => {
     };
     
     // Add event listener
-    document.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     
     // Clean up
     return () => {
-      document.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [authUser, user]);
 
@@ -123,7 +116,7 @@ export const UserBanner = ({ user }: UserBannerProps) => {
   
   function getAvatarUrl() {
     if (!displayUser) return `https://ui-avatars.com/api/?name=User&background=random`;
-    if (displayUser.avatar) {
+    if (displayUser.avatar && displayUser.avatar !== "") {
       return displayUser.avatar;
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayUser.fullName || "User")}&background=random`;

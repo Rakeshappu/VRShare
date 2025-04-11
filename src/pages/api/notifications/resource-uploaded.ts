@@ -4,7 +4,6 @@ import connectDB from '../../../lib/db/connect';
 import { notifyResourceUpload } from '../../../lib/realtime/socket';
 import jwt from 'jsonwebtoken';
 import { User } from '../../../lib/db/models/User';
-import { Notification } from '../../../lib/db/models/Notification';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Handle CORS preflight
