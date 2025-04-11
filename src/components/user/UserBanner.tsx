@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Award, Calendar } from 'lucide-react';
 import { User } from '../../types';
@@ -12,7 +11,7 @@ interface UserBannerProps {
 }
 
 export const UserBanner = ({ user }: UserBannerProps) => {
-  const { user: authUser, setUser: updateAuthUser } = useAuth();
+  const { user: authUser, setUser } = useAuth();
   const [activitiesToday, setActivitiesToday] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showAnimation, setShowAnimation] = useState(false);
@@ -21,14 +20,12 @@ export const UserBanner = ({ user }: UserBannerProps) => {
   // Use the authenticated user from context if not passed as prop
   const displayUser = user || authUser;
 
-  // Update avatar URL when display user changes or when avatar changes
+  // Update avatar URL when display user changes
   useEffect(() => {
     if (displayUser) {
-      const url = getAvatarUrl();
-      console.log('Setting initial avatar URL in UserBanner:', url);
-      setAvatarUrl(url);
+      setAvatarUrl(getAvatarUrl());
     }
-  }, [displayUser, displayUser?.avatar]);
+  }, [displayUser]);
   
   // Listen for profile updates
   useEffect(() => {
@@ -38,22 +35,18 @@ export const UserBanner = ({ user }: UserBannerProps) => {
         console.log('UserBanner received profile update event:', customEvent.detail);
         
         if (customEvent.detail.avatar) {
-          console.log('Updating avatar from event:', customEvent.detail.avatar);
           setAvatarUrl(customEvent.detail.avatar);
           
           // If this is the auth user, update the auth context as well
           if (authUser && (!user || user._id === authUser._id)) {
-            console.log('Updating auth context with new avatar');
-            updateAuthUser({
+            setUser({
               ...authUser,
               avatar: customEvent.detail.avatar
             });
           }
         } else {
           // If avatar isn't in the event but user was updated, recalculate avatar
-          const newUrl = getAvatarUrl();
-          console.log('Recalculating avatar URL:', newUrl);
-          setAvatarUrl(newUrl);
+          setAvatarUrl(getAvatarUrl());
         }
       }
     };
@@ -65,7 +58,7 @@ export const UserBanner = ({ user }: UserBannerProps) => {
     return () => {
       document.removeEventListener('profileUpdated', handleProfileUpdate);
     };
-  }, [authUser, user, updateAuthUser]);
+  }, [authUser, user]);
 
   // Fetch activities count for today
   useEffect(() => {
@@ -130,14 +123,9 @@ export const UserBanner = ({ user }: UserBannerProps) => {
   
   function getAvatarUrl() {
     if (!displayUser) return `https://ui-avatars.com/api/?name=User&background=random`;
-    
     if (displayUser.avatar) {
-      // Add timestamp to force refresh of image
-      const timestamp = new Date().getTime();
-      const separator = displayUser.avatar.includes('?') ? '&' : '?';
-      return `${displayUser.avatar}${separator}t=${timestamp}`;
+      return displayUser.avatar;
     }
-    
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayUser.fullName || "User")}&background=random`;
   }
 
@@ -161,8 +149,7 @@ export const UserBanner = ({ user }: UserBannerProps) => {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 260, damping: 20 }}
-              key={avatarUrl} // Add key to force re-render when avatarUrl changes
-              src={avatarUrl}
+              src={avatarUrl || getAvatarUrl()}
               alt={displayName}
               className="w-16 h-16 rounded-full border-2 border-white object-cover z-10 relative"
               onError={(e) => {

@@ -27,13 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Verify token
     const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
-    } catch (error) {
-      console.error('JWT verification error:', error);
-      return res.status(401).json({ error: 'Invalid token' });
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
     
     // Find user
     const user = await User.findById(decoded.userId);
