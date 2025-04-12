@@ -44,14 +44,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Only update avatar if it's provided and valid
     const avatarUpdateTimestamp = Date.now();
-    if (avatar !== undefined && avatar !== '' && avatar !== null) {
+    if (avatar !== undefined && avatar !== '') {
       console.log('Updating user avatar to:', avatar);
+      
+      // Clean up URL to avoid double timestamps
+      let cleanAvatarUrl = avatar;
+      if (avatar.includes('?t=')) {
+        cleanAvatarUrl = avatar.split('?t=')[0];
+      }
+      
       // Add timestamp to prevent caching issues
-      user.avatar = avatar.includes('?') 
-        ? `${avatar.split('?')[0]}?t=${avatarUpdateTimestamp}` 
-        : `${avatar}?t=${avatarUpdateTimestamp}`;
-    } else {
-      console.log('No valid avatar provided, keeping existing avatar');
+      user.avatar = `${cleanAvatarUrl}?t=${avatarUpdateTimestamp}`;
+      console.log('Final avatar URL with timestamp:', user.avatar);
     }
     
     if (gender !== undefined) user.gender = gender;
@@ -61,7 +65,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('Updating user profile with data:', { 
       fullName, phoneNumber, department, 
       avatarProvided: !!avatar,
-      gender, batch, degree
+      gender, batch, degree,
+      finalAvatar: user.avatar
     });
     
     await user.save();

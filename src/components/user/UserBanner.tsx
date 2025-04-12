@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Award, Calendar } from 'lucide-react';
 import { User } from '../../types';
@@ -41,7 +40,14 @@ export const UserBanner = ({ user }: UserBannerProps) => {
         setLastProfileUpdate(Date.now());
         
         if (customEvent.detail.avatar) {
-          setAvatarUrl(customEvent.detail.avatar + '?t=' + Date.now());
+          // Clean the URL from any existing timestamps
+          let cleanAvatarUrl = customEvent.detail.avatar;
+          if (cleanAvatarUrl.includes('?t=')) {
+            cleanAvatarUrl = cleanAvatarUrl.split('?t=')[0];
+          }
+          
+          // Add a new timestamp
+          setAvatarUrl(cleanAvatarUrl + '?t=' + Date.now());
         }
       }
     };
@@ -117,12 +123,18 @@ export const UserBanner = ({ user }: UserBannerProps) => {
   }
   
   function getAvatarUrl() {
-    const timestamp = new Date().getTime(); // Always use current timestamp to bust cache
+    const timestamp = Date.now(); // Always use current timestamp to bust cache
     
     if (!displayUser) return `https://ui-avatars.com/api/?name=User&background=random&t=${timestamp}`;
     
     if (displayUser.avatar && displayUser.avatar !== "") {
-      // Always add timestamp to bust cache
+      // Check if avatar already has a timestamp
+      if (displayUser.avatar.includes('?t=')) {
+        // Replace existing timestamp with new one
+        return `${displayUser.avatar.split('?t=')[0]}?t=${timestamp}`;
+      }
+      
+      // Add timestamp to bust cache
       return `${displayUser.avatar}?t=${timestamp}`;
     }
     

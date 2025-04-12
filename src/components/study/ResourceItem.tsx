@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Video, Link as LinkIcon, Eye, Download, Clock, ThumbsUp, MessageSquare, Bookmark, Send } from 'lucide-react';
 import { FacultyResource } from '../../types/faculty';
 import { DocumentViewer } from '../document/DocumentViewer';
@@ -264,8 +264,17 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
     }
   };
   
-  const handleToggleComments = async (e: React.MouseEvent) => {
+  // FIX: Use data attribute to guarantee unique comment section for each resource
+  const handleToggleComments = async (e: React.MouseEvent, currentResourceId: string) => {
     e.stopPropagation(); // Prevent card click
+    
+    // Check if the clicked button matches this resource
+    const clickedEl = e.currentTarget as HTMLElement;
+    const clickedResourceId = clickedEl.getAttribute('data-resource-id');
+    
+    if (clickedResourceId !== currentResourceId) {
+      return;
+    }
     
     setShowComments(!showComments);
     
@@ -382,7 +391,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
           </button>
           
           <button 
-            onClick={handleToggleComments}
+            onClick={(e) => handleToggleComments(e, resourceId)}
             className="text-gray-600 hover:text-blue-700 flex items-center"
             data-resource-id={resourceId}
           >

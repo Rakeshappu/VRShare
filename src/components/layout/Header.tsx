@@ -25,6 +25,7 @@ export const Header = () => {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   
   const navigate = useNavigate();
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -33,30 +34,22 @@ export const Header = () => {
   
   useEffect(() => {
     if (user) {
-      setAvatarUrl(getAvatarUrl());
+      setAvatarUrl(getAvatar());
     }
   }, [user]);
   
   useEffect(() => {
-    const handleProfileUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      console.log('Header received profile update event:', customEvent.detail);
-      
-      if (customEvent.detail) {
-        if (customEvent.detail.avatar) {
-          setAvatarUrl(customEvent.detail.avatar);
-        } else {
-          setAvatarUrl(getAvatarUrl());
-        }
-      }
+    const handleProfileUpdate = () => {
+      setLastUpdate(Date.now());
     };
     
-    document.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
     return () => {
-      document.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, []);
-  
+
   const fetchNotifications = async () => {
     try {
       setNotificationsLoading(true);
@@ -225,12 +218,15 @@ export const Header = () => {
     }
   };
   
-  function getAvatarUrl() {
-    if (user?.avatar && user.avatar.length > 0) {
-      return user.avatar;
+  const getAvatar = () => {
+    if (!user) return null;
+    
+    if (user.avatar) {
+      return `${user.avatar}?t=${lastUpdate}`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || "User")}&background=random`;
-  }
+    
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'U')}&background=random&t=${lastUpdate}`;
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
   
@@ -262,7 +258,7 @@ export const Header = () => {
   };
   
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+    <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-2 h-16">
       <div className="px-4 py-3 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center flex-1">
@@ -526,9 +522,10 @@ export const Header = () => {
                   className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-indigo-100 dark:ring-indigo-900"
                 >
                   <img 
-                    src={avatarUrl || getAvatarUrl()} 
+                    src={getAvatar()}
                     alt={user?.fullName || "User"}
                     className="w-full h-full object-cover"
+                    key={`avatar-${lastUpdate}`}
                     onError={(e) => {
                       e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || "User")}&background=random`;
                     }}
