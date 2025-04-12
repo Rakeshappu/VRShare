@@ -258,7 +258,7 @@ export const Header = () => {
   };
   
   return (
-    <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-2 h-16">
+    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="px-4 py-3 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center flex-1">
