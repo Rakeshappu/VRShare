@@ -47,17 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log(`API route: sending notification for resource ${resourceId} by ${facultyName || user.fullName} for semester ${semester}`);
     
-    // We add await here to make sure the promise is resolved
-    try {
-      await notifyResourceUpload(resourceId, facultyName || user.fullName, resourceTitle, semester);
-      console.log(`Real-time notification sent successfully for resource ${resourceId} to semester ${semester}`);
-    } catch (error) {
-      console.error('Error in notifyResourceUpload:', error);
-      return res.status(500).json({ 
-        error: 'Failed to send real-time notification',
-        details: (error as Error).message
-      });
-    }
+    // We add await here to make sure the promise is resolved before responding
+    await notifyResourceUpload(resourceId, facultyName || user.fullName, resourceTitle, semester);
+    console.log(`Real-time notification sent successfully for resource ${resourceId} to semester ${semester}`);
     
     return res.status(200).json({
       success: true,

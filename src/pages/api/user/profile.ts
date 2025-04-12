@@ -43,9 +43,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (department !== undefined) user.department = department;
     
     // Only update avatar if it's provided and valid
+    const avatarUpdateTimestamp = Date.now();
     if (avatar !== undefined && avatar !== '' && avatar !== null) {
       console.log('Updating user avatar to:', avatar);
-      user.avatar = avatar;
+      // Add timestamp to prevent caching issues
+      user.avatar = avatar.includes('?') 
+        ? `${avatar.split('?')[0]}?t=${avatarUpdateTimestamp}` 
+        : `${avatar}?t=${avatarUpdateTimestamp}`;
     } else {
       console.log('No valid avatar provided, keeping existing avatar');
     }
@@ -74,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         role: user.role,
         department: user.department,
         phoneNumber: user.phoneNumber,
-        avatar: user.avatar,
+        avatar: user.avatar, // The avatar now has a timestamp for cache busting
         gender: user.gender,
         batch: user.batch,
         degree: user.degree,

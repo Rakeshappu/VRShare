@@ -53,7 +53,7 @@ export const UserBanner = ({ user }: UserBannerProps) => {
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
-  }, [authUser, user]);
+  }, []);
 
   // Fetch activities count for today
   useEffect(() => {
@@ -117,12 +117,16 @@ export const UserBanner = ({ user }: UserBannerProps) => {
   }
   
   function getAvatarUrl() {
-    if (!displayUser) return `https://ui-avatars.com/api/?name=User&background=random`;
+    const timestamp = new Date().getTime(); // Always use current timestamp to bust cache
+    
+    if (!displayUser) return `https://ui-avatars.com/api/?name=User&background=random&t=${timestamp}`;
+    
     if (displayUser.avatar && displayUser.avatar !== "") {
-      // Add timestamp to bust cache
-      return `${displayUser.avatar}?t=${lastProfileUpdate}`;
+      // Always add timestamp to bust cache
+      return `${displayUser.avatar}?t=${timestamp}`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayUser.fullName || "User")}&background=random`;
+    
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayUser.fullName || "User")}&background=random&t=${timestamp}`;
   }
 
   const displayName = displayUser?.fullName || displayUser?.email?.split('@')[0] || "User";

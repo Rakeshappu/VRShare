@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FileText, Video, Link as LinkIcon, Eye, Download, Clock, ThumbsUp, MessageSquare, Bookmark, Send } from 'lucide-react';
 import { FacultyResource } from '../../types/faculty';
 import { DocumentViewer } from '../document/DocumentViewer';
@@ -22,9 +22,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [likesCount, setLikesCount] = useState(resource.stats?.likes || 0);
   const { user } = useAuth();
-  
-  // Unique ID for this component instance - helps ensure comment sections don't interfere with each other
-  const instanceId = resource.id?.toString() || resource._id?.toString() || Math.random().toString();
+  const resourceId = resource.id || resource._id;
   
   // Check if resource is liked and bookmarked on component mount
   useEffect(() => {
@@ -36,7 +34,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
         if (!token) return;
         
         // Check like status
-        const likeResponse = await fetch(`/api/resources/${resource.id || resource._id}/like-status`, {
+        const likeResponse = await fetch(`/api/resources/${resourceId}/like-status`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -48,7 +46,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
         }
         
         // Check bookmark status
-        const bookmarkResponse = await fetch(`/api/resources/${resource.id || resource._id}/bookmark-status`, {
+        const bookmarkResponse = await fetch(`/api/resources/${resourceId}/bookmark-status`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -64,7 +62,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
     };
     
     checkLikeStatus();
-  }, [resource, user]);
+  }, [resource, user, resourceId]);
   
   const getIcon = () => {
     switch (resource.type) {
@@ -81,7 +79,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
   
   const handleResourceOpen = async () => {
     // Update view count
-    if (resource.id || resource._id) {
+    if (resourceId) {
       await updateResourceStats('view');
     }
     
@@ -94,7 +92,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
     
     try {
       // Update both view and download stats
-      if (resource.id || resource._id) {
+      if (resourceId) {
         await updateResourceStats('view');
         await updateResourceStats('download');
       }
@@ -123,12 +121,17 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
     e.stopPropagation(); // Prevent card click
     
     // Update view count
-    if (resource.id || resource._id) {
+    if (resourceId) {
       await updateResourceStats('view');
     }
     
     // Show document viewer
     setShowDocViewer(true);
+  };
+
+  // Close document viewer
+  const handleCloseDocViewer = () => {
+    setShowDocViewer(false);
   };
   
   const updateResourceStats = async (action: 'view' | 'download' | 'like' | 'comment' | 'bookmark') => {
@@ -159,7 +162,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
       
       // Update stats in MongoDB
       const response = await api.post('/api/resources/stats', {
-        resourceId: resource.id || resource._id,
+        resourceId: resourceId,
         action: action,
         userId: user._id
       });
@@ -182,7 +185,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
       setIsLoading(true);
       // We need to include the token in the headers
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/resources/${resource.id || resource._id}/like`, {
+      const response = await fetch(`/api/resources/${resourceId}/like`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -207,7 +210,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
       
       // Notify parent component if callback provided
       if (onLikeUpdate) {
-        onLikeUpdate(resource.id || resource._id, data.isLiked, data.likesCount);
+        onLikeUpdate(resourceId, data.isLiked, data.likesCount);
       }
     } catch (error) {
       console.error('Failed to like resource:', error);
@@ -230,7 +233,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
       
       // Toggle bookmark status
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/resources/${resource.id || resource._id}/bookmark`, {
+      const response = await fetch(`/api/resources/${resourceId}/bookmark`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -270,7 +273,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
       try {
         setIsLoading(true);
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/resources/${resource.id || resource._id}/comments`, {
+        const response = await fetch(`/api/resources/${resourceId}/comments`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -302,7 +305,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
       setIsLoading(true);
       // Use fetch with explicit headers instead of axios
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/resources/${resource.id || resource._id}/comments`, {
+      const response = await fetch(`/api/resources/${resourceId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -381,7 +384,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
           <button 
             onClick={handleToggleComments}
             className="text-gray-600 hover:text-blue-700 flex items-center"
-            data-comment-id={instanceId} // Adding a unique identifier for comments
+            data-resource-id={resourceId}
           >
             <MessageSquare className="h-4 w-4" />
             <span className="ml-1">{comments.length || resource.stats.comments || 0}</span>
@@ -417,6 +420,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
         <div 
           className="p-3 border-t border-gray-100 bg-gray-50"
           onClick={(e) => e.stopPropagation()} // Prevent clicks in comment section from opening resource
+          data-resource-id={resourceId}
         >
           <h5 className="font-medium text-gray-700 mb-2">Comments</h5>
           
@@ -471,7 +475,7 @@ export const ResourceItem = ({ resource, onLikeUpdate }: ResourceItemProps) => {
         <DocumentViewer 
           fileUrl={resource.fileUrl || ''} 
           fileName={resource.fileName || resource.title || 'Document'} 
-          onClose={() => setShowDocViewer(false)} 
+          onClose={handleCloseDocViewer} 
         />
       )}
     </div>
