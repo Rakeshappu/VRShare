@@ -26,7 +26,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Verify token
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+      if (!decoded || !decoded.userId) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+    } catch (tokenError) {
+      console.error('Token verification error:', tokenError);
+      return res.status(401).json({ error: 'Invalid token' });
+    }
     
     // Find user
     const user = await User.findById(decoded.userId);
@@ -47,14 +56,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log(`API route: sending notification for resource ${resourceId} by ${facultyName || user.fullName} for semester ${semester}`);
     
-    // We add await here to make sure the promise is resolved before responding
-    await notifyResourceUpload(resourceId, facultyName || user.fullName, resourceTitle, semester);
-    console.log(`Real-time notification sent successfully for resource ${resourceId} to semester ${semester}`);
-    
-    return res.status(200).json({
-      success: true,
-      message: `Notification sent successfully to semester ${semester || 'all'}`,
-    });
+    // Explicitly await the notification process to complete
+    try {
+      await notifyResourceUpload(
+        resourceId, 
+        facultyName || user.fullName, 
+        resourceTitle, 
+        semester
+      );
+      
+      console.log(`Real-time notification sent successfully for resource ${resourceId} to semester ${semester || 'all'}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: `Notification sent successfully to semester ${semester || 'all'}`,
+      });
+    } catch (notifyError) {
+      console.error('Error in notification process:', notifyError);
+      return res.status(500).json({ 
+        error: 'Failed to send notification', 
+        details: (notifyError as Error).message 
+      });
+    }
   } catch (error) {
     console.error('Error sending resource notification:', error);
     return res.status(500).json({ error: 'Internal server error', details: (error as Error).message });
