@@ -17,16 +17,18 @@ export const UserBanner = ({ user }: UserBannerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAnimation, setShowAnimation] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [lastProfileUpdate, setLastProfileUpdate] = useState<number>(Date.now());
   
   // Use the authenticated user from context if not passed as prop
   const displayUser = user || authUser;
 
-  // Update avatar URL when display user changes
+  // Update avatar URL when display user changes or last profile update changes
   useEffect(() => {
     if (displayUser) {
-      setAvatarUrl(getAvatarUrl());
+      const url = getAvatarUrl();
+      setAvatarUrl(url);
     }
-  }, [displayUser]);
+  }, [displayUser, lastProfileUpdate]);
   
   // Listen for profile updates
   useEffect(() => {
@@ -35,11 +37,11 @@ export const UserBanner = ({ user }: UserBannerProps) => {
       if (customEvent.detail) {
         console.log('UserBanner received profile update event:', customEvent.detail);
         
+        // Force refresh avatar by updating timestamp
+        setLastProfileUpdate(Date.now());
+        
         if (customEvent.detail.avatar) {
-          setAvatarUrl(customEvent.detail.avatar);
-        } else {
-          // If avatar isn't in the event but user was updated, recalculate avatar
-          setAvatarUrl(getAvatarUrl());
+          setAvatarUrl(customEvent.detail.avatar + '?t=' + Date.now());
         }
       }
     };
@@ -117,7 +119,8 @@ export const UserBanner = ({ user }: UserBannerProps) => {
   function getAvatarUrl() {
     if (!displayUser) return `https://ui-avatars.com/api/?name=User&background=random`;
     if (displayUser.avatar && displayUser.avatar !== "") {
-      return displayUser.avatar;
+      // Add timestamp to bust cache
+      return `${displayUser.avatar}?t=${lastProfileUpdate}`;
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayUser.fullName || "User")}&background=random`;
   }
@@ -142,9 +145,10 @@ export const UserBanner = ({ user }: UserBannerProps) => {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 260, damping: 20 }}
-              src={avatarUrl || getAvatarUrl()}
+              src={avatarUrl}
               alt={displayName}
               className="w-16 h-16 rounded-full border-2 border-white object-cover z-10 relative"
+              key={`avatar-${lastProfileUpdate}`} // Force re-render when profile updates
               onError={(e) => {
                 // Fallback if image fails to load
                 e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
