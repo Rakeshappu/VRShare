@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Header } from './components/layout/Header';
@@ -20,8 +19,8 @@ import { SubjectDetailPage } from './pages/study/SubjectDetailPage';
 import UsersManagement from './pages/admin/UsersManagement';
 import AllResources from './pages/admin/AllResources';
 
-// Import faculty pages
-import { AnalyticsPage } from './pages/faculty/AnalyticsPage';
+// Import faculty pages - fix import statement
+import AnalyticsPage from './pages/faculty/AnalyticsPage';
 import { StudentsPage } from './pages/faculty/StudentsPage';
 import { StarredPage as FacultyStarredPage } from './pages/faculty/StarredPage';
 import { TrashPage as FacultyTrashPage } from './pages/faculty/TrashPage';
@@ -67,6 +66,7 @@ function App() {
                 </PrivateRoute>
               }
             />
+           
             <Route
               path="/study-materials"
               element={

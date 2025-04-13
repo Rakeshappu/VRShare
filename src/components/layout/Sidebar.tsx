@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,7 +13,6 @@ import {
   Book,
   GraduationCap,
   User,
-  Bell,
   HelpCircle,
 } from 'lucide-react';
 import {
@@ -24,10 +24,6 @@ import {
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { toast } from 'react-hot-toast';
-import { useQuery } from '@tanstack/react-query';
-import { userService } from '../../services/user.service';
-import { Notification } from '../../types/auth';
-import { formatDistanceToNow } from 'date-fns';
 
 interface NavLink {
   path: string;
@@ -39,15 +35,6 @@ export const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const { data: notifications, isLoading: notificationsLoading } = useQuery<{ notifications: Notification[] }>({
-    queryKey: ['notifications'],
-    queryFn: () => userService.getNotifications(),
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to load notifications');
-    },
-  });
 
   const handleLogout = async () => {
     try {
@@ -57,14 +44,6 @@ export const Sidebar = () => {
     } catch (error: any) {
       toast.error(error.message || 'Logout failed');
     }
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const closeDropdown = () => {
-    setIsDropdownOpen(false);
   };
 
   const studentLinks: NavLink[] = [
@@ -132,7 +111,7 @@ export const Sidebar = () => {
 
       {/* Footer / User Info */}
       <div className="p-4 border-t border-gray-200">
-        <DropdownMenu onOpenChange={(open) => open ? setIsDropdownOpen(true) : setIsDropdownOpen(false)}>
+        <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center w-full justify-between">
               <div className="flex items-center">
@@ -150,14 +129,14 @@ export const Sidebar = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
+            <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
+              <span onClick={() => navigate('/profile')}>Profile</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem>
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
+              <span onClick={handleLogout}>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
