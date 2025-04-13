@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -48,6 +47,10 @@ const userSchema = new mongoose.Schema({
     },
   },
   isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  isAdminVerified: {
     type: Boolean,
     default: false,
   },
@@ -160,6 +163,20 @@ userSchema.methods.addNotification = async function(notificationData: {
   }
   
   return this.save();
+};
+
+// Method for admin to verify a user
+userSchema.methods.verifyByAdmin = async function() {
+  this.isAdminVerified = true;
+  await this.save();
+  return this;
+};
+
+// Method for admin to unverify a user
+userSchema.methods.unverifyByAdmin = async function() {
+  this.isAdminVerified = false;
+  await this.save();
+  return this;
 };
 
 // Safe export pattern for Next.js and Mongoose
