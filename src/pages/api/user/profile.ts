@@ -109,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email: user.email,
         role: user.role,
         department: user.department,
-        phoneNumber: user.phoneNumber,
+        phoneNumber: user.phoneNumber || '',
         avatar: user.avatar, // The avatar now has a timestamp for cache busting
         gender: user.gender,
         batch: user.batch,
