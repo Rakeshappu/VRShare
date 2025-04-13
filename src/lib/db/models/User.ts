@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -64,6 +65,18 @@ const userSchema = new mongoose.Schema({
     default: '',
   },
   degree: {
+    type: String,
+    default: '',
+  },
+  usn: {
+    type: String,
+    default: '',
+  },
+  qualification: {
+    type: String,
+    default: '',
+  },
+  designation: {
     type: String,
     default: '',
   },
