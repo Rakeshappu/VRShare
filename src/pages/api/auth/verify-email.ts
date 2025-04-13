@@ -62,7 +62,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.json({ 
       message: 'Email verified successfully',
       isAdminVerified: user.isAdminVerified,
-      requiresAdminVerification: true
+      requiresAdminVerification: true,
+      role: user.role
     });
   } catch (error) {
     console.error('OTP verification error:', error);

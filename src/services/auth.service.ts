@@ -53,6 +53,10 @@ export const authService = {
   async signup(data: SignupFormData){
     try {
       console.log('Sending signup request:', data);
+      // Make sure USN is included in the request if the role is student
+      if (data.role === 'student' && !data.usn) {
+        throw new Error('USN is required for student registration');
+      }
       const response = await api.post(API_ROUTES.AUTH.SIGNUP, data);
       console.log('Signup response:', response.data);
       return response.data;

@@ -54,6 +54,7 @@ export interface SignupFormData {
   phoneNumber: string;
   semester?: number;
   secretNumber?: string;
+  usn?: string;
 }
 
 // OTP verification data

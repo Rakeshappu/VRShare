@@ -1,203 +1,167 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  BarChart2, 
-  Users, 
-  Settings, 
-  FolderOpen, 
-  Upload, 
-  Download, 
-  Star, 
-  Trash, 
-  Menu, 
-  X,
-  FileText,
-  Share2,
-  ShieldCheck,
-  Database
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Skeleton } from '../ui/skeleton';
+import {
+  LayoutDashboard,
+  Users,
+  File,
+  Settings,
+  LogOut,
+  Book,
+  GraduationCap,
+  User,
+  Bell,
+  HelpCircle,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { Button } from '../ui/button';
+import { toast } from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
+import { userService } from '../../services/user.service';
+import { Notification } from '../../types/auth';
+import { formatDistanceToNow } from 'date-fns';
+
+interface NavLink {
+  path: string;
+  icon: React.ReactNode;
+  label: string;
+}
 
 export const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
-  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
+  const { user, logout } = useAuth();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const { data: notifications, isLoading: notificationsLoading } = useQuery<{ notifications: Notification[] }>({
+    queryKey: ['notifications'],
+    queryFn: () => userService.getNotifications(),
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to load notifications');
+    },
+  });
 
-  const handleLogoClick = () => {
-    if (user?.role === 'faculty') {
-      navigate('/faculty/dashboard');
-    } else if (user?.role === 'admin') {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/dashboard');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      navigate('/auth/login');
+    } catch (error: any) {
+      toast.error(error.message || 'Logout failed');
     }
   };
 
-  // Close sidebar when clicking outside on mobile
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const sidebar = document.getElementById('sidebar');
-      const toggleBtn = document.getElementById('sidebar-toggle');
-      
-      if (sidebar && 
-          !sidebar.contains(event.target as Node) && 
-          toggleBtn && 
-          !toggleBtn.contains(event.target as Node) &&
-          window.innerWidth < 768) {
-        setIsOpen(false);
-      }
-    };
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  const closeDropdown = () => {
+    setIsDropdownOpen(false);
+  };
 
-  const StudentLinks = () => (
-    <>
-      <SidebarLink icon={<FolderOpen />} text="My Files" path="/dashboard" active={isActive('/dashboard')} />
-      <SidebarLink icon={<FileText />} text="Study Materials" path="/study-materials" active={isActive('/study-materials')} />
-      <SidebarLink icon={<Star />} text="Starred" path="/starred" active={isActive('/starred')} />
-      <SidebarLink icon={<Download />} text="Downloads" path="/downloads" active={isActive('/downloads')} />
-    </>
-  );
+  const studentLinks: NavLink[] = [
+    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+    { path: '/study-materials', icon: <Book size={20} />, label: 'Study Materials' },
+    { path: '/profile', icon: <User size={20} />, label: 'Profile' },
+    { path: '/help', icon: <HelpCircle size={20} />, label: 'Help' },
+  ];
 
-  const FacultyLinks = () => (
-    <>
-      <SidebarLink icon={<FolderOpen />} text="My Resources" path="/faculty/dashboard" active={isActive('/faculty/dashboard')} />
-      <SidebarLink icon={<Upload />} text="Upload" path="/faculty/upload" active={isActive('/faculty/upload')} />
-      <SidebarLink icon={<BarChart2 />} text="Analytics" path="/faculty/analytics" active={isActive('/faculty/analytics')} />
-      <SidebarLink icon={<Users />} text="Students" path="/faculty/students" active={isActive('/faculty/students')} />
-      <SidebarLink icon={<Star />} text="Starred" path="/faculty/starred" active={isActive('/faculty/starred')} />
-      <SidebarLink icon={<Trash />} text="Trash" path="/faculty/trash" active={isActive('/faculty/trash')} />
-    </>
-  );
+  const facultyLinks: NavLink[] = [
+    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+    { path: '/resources', icon: <File size={20} />, label: 'Resources' },
+    { path: '/profile', icon: <User size={20} />, label: 'Profile' },
+    { path: '/help', icon: <HelpCircle size={20} />, label: 'Help' },
+  ];
 
-  const AdminLinks = () => (
-    <>
-      <SidebarLink icon={<ShieldCheck />} text="Dashboard" path="/admin/dashboard" active={isActive('/admin/dashboard')} />
-      <SidebarLink icon={<Upload />} text="Upload Content" path="/admin/upload" active={isActive('/admin/upload')} />
-      <SidebarLink icon={<Users />} text="Manage Users" path="/admin/users" active={isActive('/admin/users')} />
-      <SidebarLink icon={<Database />} text="All Resources" path="/admin/resources" active={isActive('/admin/resources')} />
-      <SidebarLink icon={<Trash />} text="Trash" path="/admin/trash" active={isActive('/admin/trash')} />
-    </>
-  );
+  const adminLinks = [
+    { path: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+    { path: '/admin/users', icon: <Users size={20} />, label: 'Users' },
+    { path: '/admin/eligible-usns', icon: <GraduationCap size={20} />, label: 'Eligible USNs' },
+    { path: '/admin/resources', icon: <File size={20} />, label: 'Resources' },
+  ];
 
-  const getLinksByRole = () => {
-    if (user?.role === 'faculty') {
-      return <FacultyLinks />;
-    } else if (user?.role === 'admin') {
-      return <AdminLinks />;
-    } else {
-      return <StudentLinks />;
+  const getLinks = () => {
+    if (!user) return [];
+    switch (user.role) {
+      case 'student':
+        return studentLinks;
+      case 'faculty':
+        return facultyLinks;
+      case 'admin':
+        return adminLinks;
+      default:
+        return [];
     }
   };
 
-  const getRoleLabel = () => {
-    if (user?.role === 'faculty') {
-      return 'Faculty Tools';
-    } else if (user?.role === 'admin') {
-      return 'Admin Controls';
-    } else {
-      return 'Learning Resources';
-    }
-  };
+  const links = getLinks();
 
   return (
-    <>
-      {/* Mobile toggle button that appears in the header */}
-      <button 
-        id="sidebar-toggle"
-        className="md:hidden fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md"
-        onClick={toggleSidebar}
-      >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-      
-      {/* Sidebar */}
-      <aside 
-        id="sidebar"
-        className={`bg-white dark:bg-gray-800 shadow-lg fixed inset-y-0 left-0 z-40 transition-transform duration-300 
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-          md:translate-x-0 md:static md:w-64 min-h-screen`}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <div onClick={handleLogoClick} className="flex items-center space-x-3 cursor-pointer">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg">
-              <Share2 className="w-5 h-5" />
-            </div>
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">VersatileShare</h2>
-          </div>
-          <button 
-            className="md:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            onClick={toggleSidebar}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        <nav className="p-4">
-          <div className="space-y-6">
-            <div>
-              <h3 className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {getRoleLabel()}
-              </h3>
-              <div className="mt-2 space-y-1">
-                {getLinksByRole()}
+    <div className="flex flex-col h-screen w-64 bg-gray-50 border-r border-gray-200">
+      {/* Header */}
+      <div className="flex items-center justify-center h-16 border-b border-gray-200">
+        <span className="text-lg font-semibold">VersatileShare</span>
+      </div>
+
+      {/* Navigation Links */}
+      <nav className="flex-grow p-4">
+        <ul>
+          {links.map((link) => (
+            <li key={link.path} className="mb-2">
+              <Button
+                variant="ghost"
+                className={`w-full justify-start ${location.pathname === link.path ? 'text-blue-600 font-medium' : 'text-gray-700'
+                  }`}
+                onClick={() => navigate(link.path)}
+              >
+                {link.icon}
+                <span className="ml-2">{link.label}</span>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* Footer / User Info */}
+      <div className="p-4 border-t border-gray-200">
+        <DropdownMenu onOpenChange={(open) => open ? setIsDropdownOpen(true) : setIsDropdownOpen(false)}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex items-center w-full justify-between">
+              <div className="flex items-center">
+                {user?.avatar ? (
+                  <Avatar className="w-8 h-8 mr-2">
+                    <AvatarImage src={user.avatar} alt={user.fullName} />
+                    <AvatarFallback>{user.fullName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Skeleton className="w-8 h-8 mr-2 rounded-full" />
+                )}
+                <span className="text-sm font-medium">{user?.fullName || 'Loading...'}</span>
               </div>
-            </div>
-            
-            <div>
-              <h3 className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Settings
-              </h3>
-              <div className="mt-2 space-y-1">
-                <SidebarLink 
-                  icon={<Settings />} 
-                  text="Settings" 
-                  path={user?.role === 'faculty' ? '/faculty/settings' : 
-                         user?.role === 'admin' ? '/admin/settings' : '/settings'} 
-                  active={isActive('/settings') || isActive('/faculty/settings') || isActive('/admin/settings')} 
-                />
-              </div>
-            </div>
-          </div>
-        </nav>
-      </aside>
-    </>
+              <Settings size={16} className="text-gray-500" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 };
-
-const SidebarLink = ({ 
-  icon, 
-  text, 
-  path, 
-  active 
-}: { 
-  icon: React.ReactNode; 
-  text: string; 
-  path: string;
-  active: boolean;
-}) => (
-  <Link
-    to={path}
-    className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-      active 
-        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
-        : 'text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400'
-    }`}
-  >
-    <span className={active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}>{icon}</span>
-    <span>{text}</span>
-  </Link>
-);
