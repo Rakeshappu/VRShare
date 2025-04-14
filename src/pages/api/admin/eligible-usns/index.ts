@@ -6,11 +6,12 @@ import { User } from '../../../../lib/db/models/User';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
 
-// CORS middleware
+// CORS middleware with improved origins and headers
 const corsMiddleware = cors({
-  origin: ['http://localhost:8080', 'http://localhost:5173'],
+  origin: ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS', 'PUT', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 });
 
 // Run middleware helper
@@ -28,6 +29,9 @@ const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     return res.status(200).end();
   }
 
@@ -46,6 +50,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const token = authHeader.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role: string };
+      
+      // Log details for debugging
+      console.log('User role:', decoded.role);
+      console.log('User ID:', decoded.userId);
+      console.log('Request method:', req.method);
       
       // Ensure the user is an admin
       if (decoded.role !== 'admin') {

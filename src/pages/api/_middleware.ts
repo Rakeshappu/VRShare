@@ -6,7 +6,7 @@ import Cors from 'cors';
 type Handler = (req: NextApiRequest, res: NextApiResponse) => Promise<void>
 
 const cors = Cors({
-  origin: ['http://localhost:8080', 'http://localhost:5173'],
+  origin: ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000', '*'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -26,8 +26,11 @@ export function runCorsMiddleware(req: NextApiRequest, res: NextApiResponse) {
 
 export const withDB = (handler: Handler) => async (req: NextApiRequest, res: NextApiResponse) => {
   try {
-    // Handle preflight requests
+    // Set CORS headers directly for preflight requests
     if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,PUT,OPTIONS,PATCH');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
       res.status(200).end();
       return;
     }
@@ -43,6 +46,9 @@ export const withDB = (handler: Handler) => async (req: NextApiRequest, res: Nex
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,PUT,OPTIONS,PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     res.status(200).end();
     return;
   }

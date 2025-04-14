@@ -85,8 +85,13 @@ api.interceptors.response.use(
     }
     
     // Special handling for 403 errors in admin section
-    if (error.response?.status === 403 && error.config?.url?.includes('/admin/')) {
-      toast.error('You do not have permission to perform this action.');
+    if (error.response?.status === 403) {
+      if (error.config?.url?.includes('/admin/')) {
+        toast.error('You do not have permission to perform this action.');
+        console.warn('Admin permission denied:', error.config?.url);
+      } else {
+        toast.error('Access forbidden. Please check your permissions.');
+      }
       return Promise.reject({
         message: 'You do not have permission to perform this action.',
         status: error.response.status,
@@ -99,7 +104,9 @@ api.interceptors.response.use(
       console.error('Server error:', error.response.data);
       
       // For admin dashboard stats, provide fallback
-      if (error.config?.url?.includes('/api/user/stats')) {
+      if (error.config?.url?.includes('/api/user/stats') || 
+          error.config?.url?.includes('/api/resources/stats')) {
+        console.warn('Using fallback data for stats API');
         return Promise.reject({
           message: 'Error loading analytics. Using fallback data.',
           status: error.response.status,
@@ -119,7 +126,10 @@ api.interceptors.response.use(
     
     // Show error toast for API errors (except auth errors which are handled separately)
     if (error.response?.status !== 401) {
-      toast.error(errorMessage);
+      // Prevent duplicate toasts for analytics errors
+      if (!error.config?.url?.includes('/api/user/stats')) {
+        toast.error(errorMessage);
+      }
     }
     
     // Format error for easier handling in components

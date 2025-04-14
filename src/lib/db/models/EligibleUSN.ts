@@ -15,7 +15,9 @@ const eligibleUSNSchema = new mongoose.Schema({
   },
   semester: {
     type: Number,
-    required: true
+    required: true,
+    min: 1,
+    max: 8
   },
   isUsed: {
     type: Boolean,
@@ -31,11 +33,11 @@ const eligibleUSNSchema = new mongoose.Schema({
   }
 });
 
-// Add index for faster queries
+// Add composite indexes for faster queries
 eligibleUSNSchema.index({ usn: 1 });
-eligibleUSNSchema.index({ department: 1 });
-eligibleUSNSchema.index({ semester: 1 });
-eligibleUSNSchema.index({ isUsed: 1 });
+eligibleUSNSchema.index({ department: 1, semester: 1 });
+eligibleUSNSchema.index({ isUsed: 1, department: 1 });
+eligibleUSNSchema.index({ createdAt: -1 });
 
 // Safe export pattern for Next.js and Mongoose
 let EligibleUSN: mongoose.Model<any>;
