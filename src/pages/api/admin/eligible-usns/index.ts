@@ -4,12 +4,34 @@ import connectDB from '../../../../lib/db/connect';
 import { EligibleUSN } from '../../../../lib/db/models/EligibleUSN';
 import { User } from '../../../../lib/db/models/User';
 import jwt from 'jsonwebtoken';
+import cors from 'cors';
+
+// CORS middleware
+const corsMiddleware = cors({
+  origin: ['http://localhost:8080', 'http://localhost:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+});
+
+// Run middleware helper
+const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (result: any) => {
+      if (result instanceof Error) {
+        return reject(result);
+      }
+      return resolve(result);
+    });
+  });
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
+
+  await runMiddleware(req, res, corsMiddleware);
 
   try {
     await connectDB();
@@ -21,75 +43,81 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Verify token
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role: string };
-    
-    // Ensure the user is an admin
-    if (decoded.role !== 'admin') {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
+    try {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role: string };
+      
+      // Ensure the user is an admin
+      if (decoded.role !== 'admin') {
+        console.log('Access denied: User role is', decoded.role);
+        return res.status(403).json({ error: 'Not authorized - Admin access required' });
+      }
 
-    // GET - List all eligible USNs
-    if (req.method === 'GET') {
-      const { department, semester, isUsed } = req.query;
-      
-      // Build filter object
-      const filter: any = {};
-      
-      if (department) filter.department = department;
-      if (semester) filter.semester = parseInt(semester as string);
-      if (isUsed !== undefined) filter.isUsed = isUsed === 'true';
-      
-      const eligibleUSNs = await EligibleUSN.find(filter).sort({ createdAt: -1 });
-      
-      return res.status(200).json({ eligibleUSNs });
-    }
-    
-    // POST - Create new eligible USN
-    if (req.method === 'POST') {
-      const { usn, department, semester } = req.body;
-      
-      if (!usn || !department || !semester) {
-        return res.status(400).json({ error: 'USN, department, and semester are required' });
+      // GET - List all eligible USNs
+      if (req.method === 'GET') {
+        const { department, semester, isUsed } = req.query;
+        
+        // Build filter object
+        const filter: any = {};
+        
+        if (department) filter.department = department;
+        if (semester) filter.semester = parseInt(semester as string);
+        if (isUsed !== undefined) filter.isUsed = isUsed === 'true';
+        
+        const eligibleUSNs = await EligibleUSN.find(filter).sort({ createdAt: -1 });
+        
+        return res.status(200).json({ eligibleUSNs });
       }
       
-      // Check if USN already exists
-      const existingUSN = await EligibleUSN.findOne({ usn: usn.toUpperCase() });
-      if (existingUSN) {
-        return res.status(400).json({ error: 'USN already exists' });
+      // POST - Create new eligible USN
+      if (req.method === 'POST') {
+        const { usn, department, semester } = req.body;
+        
+        if (!usn || !department || !semester) {
+          return res.status(400).json({ error: 'USN, department, and semester are required' });
+        }
+        
+        // Check if USN already exists
+        const existingUSN = await EligibleUSN.findOne({ usn: usn.toUpperCase() });
+        if (existingUSN) {
+          return res.status(400).json({ error: 'USN already exists' });
+        }
+        
+        // Create new eligible USN
+        const newEligibleUSN = new EligibleUSN({
+          usn: usn.toUpperCase(),
+          department,
+          semester,
+          createdBy: decoded.userId
+        });
+        
+        await newEligibleUSN.save();
+        
+        return res.status(201).json({ 
+          success: true, 
+          message: 'Eligible USN created successfully',
+          eligibleUSN: newEligibleUSN
+        });
       }
       
-      // Create new eligible USN
-      const newEligibleUSN = new EligibleUSN({
-        usn: usn.toUpperCase(),
-        department,
-        semester,
-        createdBy: decoded.userId
-      });
-      
-      await newEligibleUSN.save();
-      
-      return res.status(201).json({ 
-        success: true, 
-        message: 'Eligible USN created successfully',
-        eligibleUSN: newEligibleUSN
-      });
-    }
-    
-    // DELETE - Delete all eligible USNs (only for testing)
-    if (req.method === 'DELETE') {
-      const { all } = req.query;
-      
-      if (all === 'true') {
-        await EligibleUSN.deleteMany({});
-        return res.status(200).json({ success: true, message: 'All eligible USNs deleted' });
-      } else {
-        return res.status(400).json({ error: 'Specify ?all=true to delete all eligible USNs' });
+      // DELETE - Delete all eligible USNs (only for testing)
+      if (req.method === 'DELETE') {
+        const { all } = req.query;
+        
+        if (all === 'true') {
+          await EligibleUSN.deleteMany({});
+          return res.status(200).json({ success: true, message: 'All eligible USNs deleted' });
+        } else {
+          return res.status(400).json({ error: 'Specify ?all=true to delete all eligible USNs' });
+        }
       }
+      
+      return res.status(405).json({ error: 'Method not allowed' });
+    
+    } catch (jwtError) {
+      console.error('JWT verification failed:', jwtError);
+      return res.status(401).json({ error: 'Invalid or expired token' });
     }
-    
-    return res.status(405).json({ error: 'Method not allowed' });
-    
   } catch (error) {
     console.error('Error managing eligible USNs:', error);
     return res.status(500).json({ error: 'Internal server error', details: (error as Error).message });

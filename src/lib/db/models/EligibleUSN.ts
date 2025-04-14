@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const eligibleUSNSchema = new mongoose.Schema({
@@ -29,6 +30,12 @@ const eligibleUSNSchema = new mongoose.Schema({
     ref: 'User'
   }
 });
+
+// Add index for faster queries
+eligibleUSNSchema.index({ usn: 1 });
+eligibleUSNSchema.index({ department: 1 });
+eligibleUSNSchema.index({ semester: 1 });
+eligibleUSNSchema.index({ isUsed: 1 });
 
 // Safe export pattern for Next.js and Mongoose
 let EligibleUSN: mongoose.Model<any>;

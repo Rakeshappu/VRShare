@@ -1,3 +1,4 @@
+
 export const API_ROUTES = {
   AUTH: {
     LOGIN: '/api/auth/login',
@@ -22,6 +23,8 @@ export const API_ROUTES = {
   },
   ADMIN: {
     ELIGIBLE_USNS: '/api/admin/eligible-usns',
+    BULK_ELIGIBLE_USNS: '/api/admin/eligible-usns/bulk',
+    DELETE_ELIGIBLE_USN: (id: string) => `/api/admin/eligible-usns/${id}`,
     USERS: '/api/admin/users',
   },
   RESOURCES: {

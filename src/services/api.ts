@@ -1,9 +1,11 @@
+
 //src\services\api.ts
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
+// Create API instance with default config
 const api = axios.create({
-  baseURL: '/', // Using relative URL for API requests
+  baseURL: '/', // Use relative URL for API requests
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -49,6 +51,17 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network Error:', error.message);
+      toast.error('Network error. Please check your connection.');
+      return Promise.reject({
+        message: 'Network error. Please check your connection.',
+        status: 0,
+        data: null
+      });
+    }
+    
     // Log detailed error for debugging
     console.error('API Response Error:', {
       status: error.response?.status,
@@ -71,14 +84,41 @@ api.interceptors.response.use(
       }
     }
     
+    // Special handling for 403 errors in admin section
+    if (error.response?.status === 403 && error.config?.url?.includes('/admin/')) {
+      toast.error('You do not have permission to perform this action.');
+      return Promise.reject({
+        message: 'You do not have permission to perform this action.',
+        status: error.response.status,
+        data: error.response.data
+      });
+    }
+    
+    // Handle 500 errors more gracefully
+    if (error.response?.status === 500) {
+      console.error('Server error:', error.response.data);
+      
+      // For admin dashboard stats, provide fallback
+      if (error.config?.url?.includes('/api/user/stats')) {
+        return Promise.reject({
+          message: 'Error loading analytics. Using fallback data.',
+          status: error.response.status,
+          data: error.response.data,
+          fallback: true
+        });
+      }
+      
+      toast.error('Server error. Please try again later.');
+    }
+    
     // Extract error message from response
     const errorMessage = 
       error.response?.data?.error || 
       error.message || 
       'An error occurred';
     
-    // Show error toast for API errors
-    if (error.response?.status !== 401) { // Don't show toast for auth errors
+    // Show error toast for API errors (except auth errors which are handled separately)
+    if (error.response?.status !== 401) {
       toast.error(errorMessage);
     }
     

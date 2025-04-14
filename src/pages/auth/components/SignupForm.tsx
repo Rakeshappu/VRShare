@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SignupFormData } from '../../../types/auth';
 import { authService } from '../../../services/auth.service';
@@ -18,6 +18,11 @@ export const SignupForm = () => {
       if (formData.role === 'student' && (!formData.usn || formData.usn.trim() === '')) {
         toast.error('USN is required for student registration');
         return;
+      }
+      
+      // Ensure USN is uppercase for consistent checking
+      if (formData.usn) {
+        formData.usn = formData.usn.toUpperCase().trim();
       }
       
       // Send the form data including USN to the registration endpoint
