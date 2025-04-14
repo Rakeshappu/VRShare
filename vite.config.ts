@@ -38,6 +38,7 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
+        priority: 100, // Higher priority than the general /api route
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('Admin proxy error:', err);
@@ -47,11 +48,19 @@ export default defineConfig({
             const authHeader = req.headers.authorization;
             if (authHeader) {
               proxyReq.setHeader('Authorization', authHeader);
+              console.log('Admin request with auth header:', req.method, req.url);
+            } else {
+              console.warn('Admin request missing auth header:', req.method, req.url);
             }
-            console.log('Sending Admin Request:', req.method, req.url);
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Admin Response:', proxyRes.statusCode, req.url);
+            console.log('Admin Response:', proxyRes.statusCode, req.url);
+            
+            // Debug response headers
+            const headers = proxyRes.headers;
+            if (proxyRes.statusCode >= 400) {
+              console.log('Admin error response headers:', headers);
+            }
           });
         },
       },

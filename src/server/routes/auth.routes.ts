@@ -18,7 +18,23 @@ router.get('/me', authMiddleware, (req, res) => {
 
 // Admin-only routes
 router.get('/admin-check', authMiddleware, adminMiddleware, (req, res) => {
-  res.json({ message: 'You have admin access', user: req.user });
+  res.json({ 
+    message: 'You have admin access', 
+    user: req.user, 
+    timestamp: new Date().toISOString() 
+  });
+});
+
+// Debug route to check token and role
+router.get('/debug-token', authMiddleware, (req, res) => {
+  res.json({
+    user: req.user,
+    role: req.user.role,
+    isAdmin: req.user.role === 'admin',
+    isFaculty: req.user.role === 'faculty',
+    isStudent: req.user.role === 'student',
+    timestamp: new Date().toISOString()
+  });
 });
 
 export default router;

@@ -42,12 +42,17 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
   // Log the user role for debugging
   console.log('Checking admin access:', req.user?.role);
   
-  if (!req.user || req.user.role !== 'admin') {
-    console.error(`Admin access denied for user with role: ${req.user?.role || 'undefined'}`);
+  if (!req.user) {
+    console.error('Admin access denied: No user found in request');
     return res.status(403).json({ error: 'Admin access required' });
   }
   
-  console.log('Admin access granted');
+  if (req.user.role !== 'admin') {
+    console.error(`Admin access denied for user with role: ${req.user.role || 'undefined'}`);
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  console.log('Admin access granted for user:', req.user.userId);
   next();
 };
 
@@ -61,6 +66,6 @@ export const facultyMiddleware = (req: Request, res: Response, next: NextFunctio
     return res.status(403).json({ error: 'Faculty access required' });
   }
   
-  console.log('Faculty access granted');
+  console.log('Faculty access granted for user:', req.user.userId);
   next();
 };

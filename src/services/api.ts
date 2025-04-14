@@ -29,6 +29,28 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      
+      // Log auth header for admin routes to help debug permission issues
+      if (config.url?.includes('/admin/')) {
+        console.log(`Admin route detected: ${config.url}`);
+        console.log(`Setting Authorization header: Bearer ${token.substring(0, 10)}...`);
+        
+        // Decode JWT token to check role (only for debugging)
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(window.atob(base64));
+          console.log('Token payload for admin request:', { 
+            userId: payload.userId, 
+            role: payload.role,
+            isAdmin: payload.role === 'admin'
+          });
+        } catch (e) {
+          console.warn('Could not decode token for debugging:', e);
+        }
+      }
+    } else if (config.url?.includes('/admin/')) {
+      console.warn('Warning: Attempting to access admin route without token');
     }
     
     // Log request for debugging
@@ -99,6 +121,31 @@ api.interceptors.response.use(
       if (error.config?.url?.includes('/admin/')) {
         // Log admin permission issues but don't show toast - the code will handle it
         console.warn('Admin permission denied:', error.config?.url);
+        
+        // Check local storage for user role info
+        try {
+          const userInfo = localStorage.getItem('user');
+          if (userInfo) {
+            const user = JSON.parse(userInfo);
+            console.log('Current user role in localStorage:', user.role);
+            
+            if (user.role !== 'admin') {
+              console.error('User does not have admin role in localStorage');
+              toast.error('You need administrator privileges to access this section');
+              
+              // Redirect to dashboard based on role
+              if (user.role === 'faculty') {
+                window.location.href = '/faculty/dashboard';
+              } else {
+                window.location.href = '/dashboard';
+              }
+            }
+          } else {
+            console.warn('No user info in localStorage');
+          }
+        } catch (e) {
+          console.error('Error checking localStorage user info:', e);
+        }
       } else {
         toast.error('Access forbidden. Please check your permissions.');
       }
@@ -155,6 +202,31 @@ api.interceptors.response.use(
 // Add request cancellation support
 export const createCancelToken = () => {
   return axios.CancelToken.source();
+};
+
+// Helper to refresh token if needed (placeholder for future implementation)
+export const refreshAuthToken = async () => {
+  try {
+    // Implementation would go here
+    return false;
+  } catch (error) {
+    console.error('Token refresh failed:', error);
+    return false;
+  }
+};
+
+// Helper to check if user has admin role
+export const hasAdminRole = () => {
+  try {
+    const userInfo = localStorage.getItem('user');
+    if (!userInfo) return false;
+    
+    const user = JSON.parse(userInfo);
+    return user.role === 'admin';
+  } catch (e) {
+    console.error('Error checking admin role:', e);
+    return false;
+  }
 };
 
 export default api;

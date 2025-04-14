@@ -53,16 +53,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const JWT_SECRET = process.env.JWT_SECRET;
       
       if (!JWT_SECRET) {
-        console.error('JWT_SECRET is not defined');
+        console.error('JWT_SECRET is not defined in environment variables');
         return res.status(500).json({ error: 'Server configuration error' });
       }
       
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
       
       // Enhanced logging for debugging
-      console.log('Token verification successful');
-      console.log('User role:', decoded.role);
-      console.log('User ID:', decoded.userId);
+      console.log('Token verification successful for eligible-usns API');
+      console.log('User role from token:', decoded.role);
+      console.log('User ID from token:', decoded.userId);
       console.log('Request method:', req.method);
       
       // Ensure the user is an admin with more detailed logging
