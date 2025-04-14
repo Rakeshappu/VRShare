@@ -27,7 +27,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     // Add user info to request object
     req.user = decoded;
     
-    // Log successful authentication
+    // Log successful authentication with more details
     console.log(`Authenticated user: ${decoded.userId} with role: ${decoded.role}`);
     
     next();
@@ -37,18 +37,30 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-// Admin-only middleware
+// Admin-only middleware with improved logging
 export const adminMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  // Log the user role for debugging
+  console.log('Checking admin access:', req.user?.role);
+  
   if (!req.user || req.user.role !== 'admin') {
+    console.error(`Admin access denied for user with role: ${req.user?.role || 'undefined'}`);
     return res.status(403).json({ error: 'Admin access required' });
   }
+  
+  console.log('Admin access granted');
   next();
 };
 
-// Faculty-only middleware
+// Faculty-only middleware with improved logging
 export const facultyMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  // Log the user role for debugging
+  console.log('Checking faculty access:', req.user?.role);
+  
   if (!req.user || (req.user.role !== 'faculty' && req.user.role !== 'admin')) {
+    console.error(`Faculty access denied for user with role: ${req.user?.role || 'undefined'}`);
     return res.status(403).json({ error: 'Faculty access required' });
   }
+  
+  console.log('Faculty access granted');
   next();
 };

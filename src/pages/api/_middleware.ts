@@ -37,6 +37,10 @@ export const withDB = (handler: Handler) => async (req: NextApiRequest, res: Nex
     
     await runCorsMiddleware(req, res);
     await connectDB();
+    
+    // Log each API request for debugging
+    console.log(`API ${req.method} request to ${req.url} with auth: ${req.headers.authorization ? 'Yes' : 'No'}`);
+    
     return handler(req, res);
   } catch (error) {
     console.error('API route error:', error);

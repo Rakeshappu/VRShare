@@ -8,7 +8,7 @@ import cors from 'cors';
 
 // CORS middleware with improved origins and headers
 const corsMiddleware = cors({
-  origin: ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000', '*'],
   credentials: true,
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS', 'PUT', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -43,24 +43,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('No authorization header or invalid format');
       return res.status(401).json({ error: 'Not authenticated' });
     }
     
     // Verify token
     try {
       const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role: string };
+      const JWT_SECRET = process.env.JWT_SECRET;
       
-      // Log details for debugging
+      if (!JWT_SECRET) {
+        console.error('JWT_SECRET is not defined');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+      
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
+      
+      // Enhanced logging for debugging
+      console.log('Token verification successful');
       console.log('User role:', decoded.role);
       console.log('User ID:', decoded.userId);
       console.log('Request method:', req.method);
       
-      // Ensure the user is an admin
+      // Ensure the user is an admin with more detailed logging
       if (decoded.role !== 'admin') {
         console.log('Access denied: User role is', decoded.role);
+        console.log('Access requires admin role');
         return res.status(403).json({ error: 'Not authorized - Admin access required' });
       }
+      
+      console.log('Admin access confirmed for user:', decoded.userId);
 
       // GET - List all eligible USNs
       if (req.method === 'GET') {
@@ -73,7 +85,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (semester) filter.semester = parseInt(semester as string);
         if (isUsed !== undefined) filter.isUsed = isUsed === 'true';
         
+        console.log('Fetching eligible USNs with filter:', filter);
         const eligibleUSNs = await EligibleUSN.find(filter).sort({ createdAt: -1 });
+        console.log(`Found ${eligibleUSNs.length} eligible USNs`);
         
         return res.status(200).json({ eligibleUSNs });
       }
@@ -101,6 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         
         await newEligibleUSN.save();
+        console.log('Created new eligible USN:', newEligibleUSN.usn);
         
         return res.status(201).json({ 
           success: true, 
@@ -115,6 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         if (all === 'true') {
           await EligibleUSN.deleteMany({});
+          console.log('All eligible USNs deleted');
           return res.status(200).json({ success: true, message: 'All eligible USNs deleted' });
         } else {
           return res.status(400).json({ error: 'Specify ?all=true to delete all eligible USNs' });

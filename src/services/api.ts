@@ -72,8 +72,18 @@ api.interceptors.response.use(
       message: error.message
     });
     
-    // Handle authentication errors
+    // Check if token is expired or invalid - we may need to refresh or logout
     if (error.response?.status === 401) {
+      const errorMessage = error.response?.data?.error || 'Authentication failed';
+      console.error('Auth error:', errorMessage);
+      
+      // If token is explicitly reported as expired, try refreshing (not implemented yet)
+      if (errorMessage.includes('expired')) {
+        // Future enhancement: implement token refresh
+        console.warn('Token expired, should implement refresh');
+      }
+      
+      // For now, just remove auth data and redirect to login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
@@ -87,11 +97,12 @@ api.interceptors.response.use(
     // Special handling for 403 errors in admin section
     if (error.response?.status === 403) {
       if (error.config?.url?.includes('/admin/')) {
-        toast.error('You do not have permission to perform this action.');
+        // Log admin permission issues but don't show toast - the code will handle it
         console.warn('Admin permission denied:', error.config?.url);
       } else {
         toast.error('Access forbidden. Please check your permissions.');
       }
+      
       return Promise.reject({
         message: 'You do not have permission to perform this action.',
         status: error.response.status,
