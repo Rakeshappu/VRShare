@@ -1,4 +1,3 @@
-
 import api from './api';
 import { API_ROUTES } from '../lib/api/routes';
 import { SignupFormData, LoginFormData, User } from '../types/auth';
@@ -57,6 +56,7 @@ export const authService = {
       if (data.role === 'student' && !data.usn) {
         throw new Error('USN is required for student registration');
       }
+      // Fix: Use correct API endpoint from API_ROUTES
       const response = await api.post(API_ROUTES.AUTH.SIGNUP, data);
       console.log('Signup response:', response.data);
       return response.data;

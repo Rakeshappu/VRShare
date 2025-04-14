@@ -1,6 +1,4 @@
 
-import React from 'react';
-
 interface SkeletonProps {
   className?: string;
 }

@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 const GoogleLoginButton = ({ onClick, disabled }: { onClick: () => void, disabled?: boolean }) => {
   return (
     <button
