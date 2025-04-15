@@ -31,7 +31,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
         .catch(error => {
           console.error('Admin verification failed:', error);
           if (error.status === 403) {
-            toast.error('Admin privileges could not be verified');
+            toast.error('Admin privileges could not be verified. Please try logging out and back in.');
             forceReloginIfNeeded();
           }
         });

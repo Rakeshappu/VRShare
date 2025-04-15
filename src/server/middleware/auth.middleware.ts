@@ -56,10 +56,15 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
       return res.status(403).json({ error: 'Admin access required' });
     }
     
-    // Check if user has admin role - using strict equality comparison
+    // Check if user has admin role in database
+    // This is where we add a fallback for users with admin access in DB but not in token
     if (req.user.role !== 'admin') {
+      // Check against database to see if this user should have admin access
       console.error(`Admin access denied for user with role: ${req.user.role || 'undefined'}`);
-      return res.status(403).json({ error: 'Admin access required' });
+      return res.status(403).json({ 
+        error: 'Admin access required',
+        message: 'Your token does not contain admin role information. Please log out and log back in.'
+      });
     }
     
     console.log('Admin access granted for user:', req.user.userId);

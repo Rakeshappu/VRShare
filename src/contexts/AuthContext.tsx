@@ -3,6 +3,8 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
 import { API_ROUTES } from '../lib/api/routes';
 import { User, UserRole } from '../types/auth';
+import { toast } from 'react-hot-toast';
+import { decodeToken } from '../utils/authUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -14,6 +16,8 @@ interface AuthContextType {
   error: string | null;
   clearError: () => void;
   isAuthenticated: boolean;
+  verifyOTP?: (email: string, otp: string) => Promise<any>;
+  resendOTP?: (email: string) => Promise<any>;
 }
 
 interface SignupData {
@@ -42,6 +46,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
+        
+        // Decode token to verify role information
+        const decodedToken = decodeToken(storedToken);
+        const tokenRole = decodedToken?.role;
+        
+        // If token doesn't have role but local storage does, show warning
+        if (userData.role && !tokenRole) {
+          console.warn('Token missing role information. Consider re-login.');
+          toast.warn('Your session may need refreshing. Consider logging out and back in.', {
+            duration: 6000
+          });
+        }
+        
         setUser(userData);
         
         // Verify token with server
@@ -92,6 +109,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Store token and user data in localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Verify token has role information
+      const decodedToken = decodeToken(token);
+      if (!decodedToken?.role && user?.role) {
+        console.warn('Token does not contain role information but user data does.');
+        // We'll continue but log this warning
+      }
       
       setUser(user);
     } catch (err: any) {
@@ -147,6 +171,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('user', JSON.stringify(updatedUser));
     }
   };
+  
+  // Add OTP verification methods to support the OtpVerification component
+  const verifyOTP = async (email: string, otp: string) => {
+    try {
+      const response = await api.post(API_ROUTES.AUTH.VERIFY_OTP, { email, otp });
+      return response.data;
+    } catch (err: any) {
+      const errorMessage = err.message || 'OTP verification failed. Please try again.';
+      setError(errorMessage);
+      throw err;
+    }
+  };
+
+  const resendOTP = async (email: string) => {
+    try {
+      const response = await api.post(API_ROUTES.AUTH.SEND_OTP, { email });
+      return response.data;
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to resend OTP. Please try again.';
+      setError(errorMessage);
+      throw err;
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ 
@@ -158,7 +205,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateUser, 
       error, 
       clearError,
-      isAuthenticated: !!user
+      isAuthenticated: !!user,
+      verifyOTP,
+      resendOTP
     }}>
       {children}
     </AuthContext.Provider>

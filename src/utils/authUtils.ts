@@ -43,9 +43,9 @@ export const validateUserRoleWithToken = async (): Promise<boolean> => {
         const response = await api.get('/api/auth/debug-token');
         console.log('Debug token response:', response.data);
         
-        // If server also confirms role mismatch
-        if (response.data.role !== userData.role) {
-          toast.error('Your session information is inconsistent. Please log out and log in again.');
+        if (userData.role === 'admin') {
+          // For admin users, suggest re-login if token doesn't have admin role
+          toast.error('Your admin session is incomplete. Please log out and log back in.');
           return false;
         }
       } catch (error) {
@@ -72,7 +72,36 @@ export const forceReloginIfNeeded = async () => {
   const isValid = await validateUserRoleWithToken();
   if (!isValid) {
     toast.error('Please log out and log back in to refresh your session.');
-    // Consider adding a logout function here if persistence is an issue
+    // Optionally, could implement a forced logout here
   }
   return isValid;
+};
+
+// Function to ensure admin role is in the token
+export const ensureAdminRoleInToken = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    
+    if (!token || !userStr) {
+      return false;
+    }
+    
+    const userData = JSON.parse(userStr);
+    if (userData.role !== 'admin') {
+      return false; // Not an admin user
+    }
+    
+    const tokenPayload = decodeToken(token);
+    if (tokenPayload && tokenPayload.role === 'admin') {
+      return true; // Token has admin role
+    }
+    
+    // Token doesn't have admin role
+    toast.error('Your admin session needs to be refreshed. Please log out and log back in.');
+    return false;
+  } catch (e) {
+    console.error('Error checking admin role in token:', e);
+    return false;
+  }
 };

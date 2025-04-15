@@ -22,16 +22,26 @@ router.get('/me', authMiddleware, (req, res) => {
 
 // Admin-only routes
 router.get('/admin-check', authMiddleware, (req, res) => {
+  // Always return the token role for diagnosis
+  const tokenRole = req.user?.role;
+  
   // Check explicitly for admin role in the token
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && tokenRole === 'admin') {
     res.json({ 
       message: 'You have admin access', 
       user: req.user, 
       timestamp: new Date().toISOString() 
     });
   } else {
-    console.error(`Admin access denied for user with role: ${req.user?.role || 'undefined'}`);
-    res.status(403).json({ error: 'Admin access required' });
+    console.error(`Admin access denied for user with role: ${tokenRole || 'undefined'}`);
+    
+    // Add a message indicating token doesn't have admin role
+    res.status(403).json({ 
+      error: 'Admin access required',
+      tokenRole: tokenRole || 'undefined',
+      userId: req.user?.userId,
+      message: 'Your token does not contain admin role information. Please log out and log back in.'
+    });
   }
 });
 
