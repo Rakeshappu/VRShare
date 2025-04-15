@@ -43,45 +43,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await runMiddleware(req, res, corsMiddleware);
     await connectDB();
     
-    // Check for authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'No token provided' });
     }
-    
+
     const token = authHeader.split(' ')[1];
     const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
-    
+
+    // Decode and verify JWT token
     try {
-      // Verify token
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string, exp: number };
+      console.log('Token verification successful for debug-token API');
       
-      // Find user
+      // Get user from database
       const user = await User.findById(decoded.userId).select('-password');
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
       
-      return res.status(200).json({
+      res.status(200).json({
         user: {
-          id: user._id,
+          userId: decoded.userId,
+          role: decoded.role,
           email: user.email,
-          fullName: user.fullName,
-          role: user.role,
-          department: user.department,
-          phoneNumber: user.phoneNumber,
-          avatar: user.avatar || undefined,
-          semester: user.semester || undefined,
-          isVerified: !!user.isEmailVerified,
+          fullName: user.fullName
         },
+        role: decoded.role,
+        isAdmin: decoded.role === 'admin',
+        isFaculty: decoded.role === 'faculty',
+        isStudent: decoded.role === 'student',
+        tokenExpires: new Date(decoded.exp * 1000).toISOString(),
         timestamp: new Date().toISOString()
       });
     } catch (jwtError) {
-      console.error('JWT verification failed:', jwtError);
-      return res.status(401).json({ error: 'Invalid token' });
+      console.error('JWT verification failed in debug-token:', jwtError);
+      return res.status(401).json({ error: 'Invalid or expired token', details: jwtError.message });
     }
   } catch (error) {
-    console.error('Auth error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error in debug-token handler:', error);
+    res.status(500).json({ error: 'Internal server error', details: String(error) });
   }
 }

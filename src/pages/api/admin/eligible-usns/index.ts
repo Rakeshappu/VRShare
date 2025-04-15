@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('No authorization header or invalid format');
+      console.error('No authorization header or invalid format for eligible-usns API');
       return res.status(401).json({ error: 'Not authenticated' });
     }
     
@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Ensure the user is an admin with more detailed logging
       if (decoded.role !== 'admin') {
-        console.error(`Access denied for eligible-usns: User role is ${decoded.role}, requires admin`);
+        console.error(`Access denied for eligible-usns: User role is ${decoded.role || 'undefined'}, requires admin`);
         return res.status(403).json({ error: 'Not authorized - Admin access required' });
       }
       
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const newEligibleUSN = new EligibleUSN({
           usn: usn.toUpperCase(),
           department,
-          semester,
+          semester: parseInt(semester as string),
           createdBy: decoded.userId
         });
         
@@ -136,8 +136,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       return res.status(405).json({ error: 'Method not allowed' });
     } catch (jwtError) {
-      console.error('JWT verification failed:', jwtError);
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      console.error('JWT verification failed for eligible-usns API:', jwtError);
+      return res.status(401).json({ error: 'Invalid or expired token', details: jwtError.message });
     }
   } catch (error) {
     console.error('Error managing eligible USNs:', error);

@@ -43,45 +43,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await runMiddleware(req, res, corsMiddleware);
     await connectDB();
     
-    // Check for authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'No token provided' });
     }
-    
+
     const token = authHeader.split(' ')[1];
     const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
-    
+
+    // Decode and verify JWT token
     try {
-      // Verify token
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
+      console.log('Token verification successful for admin-check API');
       
-      // Find user
+      // Check if user has admin role
+      if (decoded.role !== 'admin') {
+        console.error(`Admin access denied for user with role: ${decoded.role}`);
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      // Get user from database to verify admin status
       const user = await User.findById(decoded.userId).select('-password');
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
       
-      return res.status(200).json({
+      if (user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      res.status(200).json({
+        message: 'You have admin access',
         user: {
-          id: user._id,
-          email: user.email,
-          fullName: user.fullName,
+          userId: decoded.userId,
           role: user.role,
-          department: user.department,
-          phoneNumber: user.phoneNumber,
-          avatar: user.avatar || undefined,
-          semester: user.semester || undefined,
-          isVerified: !!user.isEmailVerified,
+          email: user.email,
+          fullName: user.fullName
         },
         timestamp: new Date().toISOString()
       });
     } catch (jwtError) {
-      console.error('JWT verification failed:', jwtError);
-      return res.status(401).json({ error: 'Invalid token' });
+      console.error('JWT verification failed in admin-check:', jwtError);
+      return res.status(401).json({ error: 'Invalid or expired token' });
     }
   } catch (error) {
-    console.error('Auth error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error in admin-check handler:', error);
+    res.status(500).json({ error: 'Internal server error', details: String(error) });
   }
 }

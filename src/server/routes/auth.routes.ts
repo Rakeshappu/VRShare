@@ -29,16 +29,35 @@ router.get('/admin-check', authMiddleware, adminMiddleware, (req, res) => {
   });
 });
 
-// Debug route to check token and role
+// Debug route to check token and role - fix this to handle errors properly
 router.get('/debug-token', authMiddleware, (req, res) => {
-  res.json({
-    user: req.user,
-    role: req.user.role,
-    isAdmin: req.user.role === 'admin',
-    isFaculty: req.user.role === 'faculty',
-    isStudent: req.user.role === 'student',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    // Ensure user data exists in request
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'No user data found in token'
+      });
+    }
+    
+    // Log for debugging
+    console.log('Debug token request - User:', req.user.userId, 'Role:', req.user.role);
+    
+    // Return detailed user information
+    res.json({
+      user: req.user,
+      role: req.user.role,
+      isAdmin: req.user.role === 'admin',
+      isFaculty: req.user.role === 'faculty',
+      isStudent: req.user.role === 'student',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error in debug-token route:', error);
+    res.status(500).json({ 
+      error: 'Error processing debug-token request',
+      message: error.message
+    });
+  }
 });
 
 export default router;

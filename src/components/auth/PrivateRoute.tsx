@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types/auth';
 import { toast } from 'react-hot-toast';
+import api from '../../services/api';
+import { API_ROUTES } from '../../lib/api/routes';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -12,6 +14,20 @@ interface PrivateRouteProps {
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
   const { user, loading } = useAuth();
+
+  // Verify admin access for admin routes
+  useEffect(() => {
+    if (!loading && user && role === 'admin' && user.role === 'admin') {
+      // Verify admin status with the server for extra security
+      api.get(API_ROUTES.AUTH.ADMIN_CHECK)
+        .catch(error => {
+          console.error('Admin verification failed:', error);
+          if (error.status === 403) {
+            toast.error('Admin privileges could not be verified');
+          }
+        });
+    }
+  }, [user, loading, role]);
 
   // Debug logs for authentication check
   console.log('PrivateRoute - Authentication check:', { 

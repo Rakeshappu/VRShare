@@ -15,12 +15,14 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
+      console.log('No authorization token found in request');
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     const decoded = verifyToken(token);
     
     if (!decoded) {
+      console.log('Invalid token provided');
       return res.status(401).json({ error: 'Invalid token' });
     }
 
@@ -28,12 +30,12 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     req.user = decoded;
     
     // Log successful authentication with more details
-    console.log(`Authenticated user: ${decoded.userId} with role: ${decoded.role}`);
+    console.log(`Authenticated user: ${decoded.userId} with role: ${decoded.role || 'undefined'}`);
     
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Invalid token', message: error.message });
   }
 };
 

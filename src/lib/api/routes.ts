@@ -10,7 +10,9 @@ export const API_ROUTES = {
     VERIFY_OTP: '/api/auth/verify-otp',
     SEND_OTP: '/api/auth/send-otp',
     RESEND_VERIFICATION: '/api/auth/resend-verification',
-    GOOGLE: '/api/auth/google'
+    GOOGLE: '/api/auth/google',
+    ADMIN_CHECK: '/api/auth/admin-check',
+    DEBUG_TOKEN: '/api/auth/debug-token'
   },
   USER: {
     PROFILE: '/api/user/profile',

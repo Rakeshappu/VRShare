@@ -225,4 +225,15 @@ export const hasAdminRole = () => {
   }
 };
 
+// This method verifies with the server if the user has admin access
+export const verifyAdminAccess = async () => {
+  try {
+    const response = await api.get('/api/auth/admin-check');
+    return response.data;
+  } catch (error) {
+    console.error('Admin access verification failed:', error);
+    return { isAdmin: false };
+  }
+};
+
 export default api;

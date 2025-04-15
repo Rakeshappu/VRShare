@@ -181,5 +181,15 @@ export const authService = {
     } catch (error: any) {
       handleApiError(error, 'Google authentication failed');
     }
+  },
+  
+  async verifyAdminStatus() {
+    try {
+      const response = await api.get(API_ROUTES.AUTH.ADMIN_CHECK);
+      return response.data;
+    } catch (error: any) {
+      console.error('Admin verification failed:', error);
+      return null;
+    }
   }
 };
