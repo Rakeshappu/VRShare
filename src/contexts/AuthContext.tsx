@@ -1,265 +1,149 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, SignupFormData } from '../types/auth';
-import { authService } from '../services/auth.service';
-import { useNavigate } from 'react-router-dom';
-import socketService from '../services/socket.service';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import api from '../services/api';
+import { API_ROUTES } from '../lib/api/routes';
+import { User, UserRole } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  error: string | null;
-  setError: (error: string | null) => void;
   login: (email: string, password: string) => Promise<void>;
-  signup: (userData: SignupFormData) => Promise<void>;
-  logout: () => void;
-  verifyEmail: (token: string) => Promise<void>;
-  clearError: () => void;
-  verifyOTP: (email: string, otp: string) => Promise<void>;
-  resendOTP: (email: string) => Promise<void>;
-  resendVerification: (email: string) => Promise<void>;
-  isAuthenticated: boolean;
-  updateUser: (userData: Partial<User>) => void;
-  checkAdminAccess: () => Promise<boolean>;
+  logout: () => Promise<void>;
+  signup: (userData: SignupData) => Promise<void>;
+  updateUser: (updatedData: Partial<User>) => void;
+}
+
+interface SignupData {
+  fullName: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  usn?: string;
+  department?: string;
+  semester?: number;
+  phoneNumber?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const navigate = useNavigate();
-
-  // Flag to control socket usage
-  const useSocketFeatures = false; // Set to false to disable sockets completely
-
-  // Function to check if current user has admin access
-  const checkAdminAccess = async (): Promise<boolean> => {
-    try {
-      const response = await authService.verifyToken();
-      return response.user.role === 'admin';
-    } catch (error) {
-      console.error('Admin access check failed:', error);
-      return false;
-    }
-  };
 
   useEffect(() => {
-    const initAuth = async () => {
+    // Check if user data exists in localStorage
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
+    if (storedToken && storedUser) {
       try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
         
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-        
-        const currentUser = await authService.getCurrentUser();
-        if (currentUser) {
-          console.log('Auth initialized with user:', currentUser.role);
-          setUser(currentUser);
-          setIsAuthenticated(true);
-          
-          // Connect to socket service when authenticated - only if feature is enabled
-          if (useSocketFeatures) {
-            try {
-              socketService.connect(token);
-            } catch (socketError) {
-              console.error('Socket connection failed:', socketError);
-              // Non-critical error, don't affect the auth flow
+        // Verify token with server
+        api.get(API_ROUTES.AUTH.ME)
+          .then(response => {
+            const serverUserData = response.data.user;
+            // Update with latest user data from server
+            if (serverUserData) {
+              const updatedUser = {
+                ...userData,
+                role: serverUserData.role || userData.role,
+                isVerified: serverUserData.isVerified || userData.isVerified,
+              };
+              
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              setUser(updatedUser);
             }
-          }
-        }
+          })
+          .catch(error => {
+            console.error('Error verifying token:', error);
+            // Token might be invalid, clear storage
+            if (error.status === 401) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              setUser(null);
+            }
+          });
       } catch (error) {
-        console.error('Auth initialization failed:', error);
-        // Clear potentially invalid auth data
-        localStorage.removeItem('token');
+        console.error('Error parsing stored user data:', error);
         localStorage.removeItem('user');
-      } finally {
-        setLoading(false);
       }
-    };
-
-    initAuth();
+    }
     
-    // Cleanup socket connection on unmount
-    return () => {
-      if (useSocketFeatures) {
-        socketService.disconnect();
-      }
-    };
+    setLoading(false);
   }, []);
-
-  // Function to update user data (used when profile is updated)
-  const updateUser = (userData: Partial<User>) => {
-    if (!user) return;
-    
-    const updatedUser = { ...user, ...userData };
-    setUser(updatedUser);
-    
-    // Update local storage
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-  };
 
   const login = async (email: string, password: string) => {
     try {
-      setLoading(true);
-      clearError();
-      const response = await authService.login({ email, password });
+      const response = await api.post(API_ROUTES.AUTH.LOGIN, { email, password });
       
-      console.log('Login successful with role:', response.user.role);
-      setUser(response.user);
-      setIsAuthenticated(true);
+      const { token, user } = response.data;
       
-      // Connect to socket - only if feature is enabled
-      if (useSocketFeatures && response.token) {
-        try {
-          socketService.connect(response.token);
-        } catch (socketError) {
-          console.error('Socket connection failed:', socketError);
-          // Non-critical error, continue auth flow
-        }
-      }
+      // Store token and user data in localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       
-      // Navigate based on user role
-      if (response.user.role === 'faculty') {
-        navigate('/faculty/dashboard');
-      } else if (response.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      setUser(user);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      // Remove token and user data from localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       
-    } catch (error: any) {
-      setError(error.message || 'Login failed');
-      throw error;
-    } finally {
-      setLoading(false);
+      // Clear user state
+      setUser(null);
+      
+      // Optionally notify the server (if you have a logout endpoint)
+      // await api.post(API_ROUTES.AUTH.LOGOUT);
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Logout error:', error);
+      return Promise.reject(error);
     }
   };
 
-  const signup = async (userData: SignupFormData) => {
+  const signup = async (userData: SignupData) => {
     try {
-      setLoading(true);
-      clearError();
-      await authService.signup(userData);
-      navigate('/auth/verify', { state: { email: userData.email } });
-    } catch (error: any) {
-      setError(error.message || 'Signup failed');
+      const response = await api.post(API_ROUTES.AUTH.SIGNUP, userData);
+      
+      const { token, user } = response.data;
+      
+      // Store token and user data in localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      setUser(user);
+    } catch (error) {
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    setIsAuthenticated(false);
-    
-    // Disconnect from socket - only if feature is enabled
-    if (useSocketFeatures) {
-      socketService.disconnect();
+  const updateUser = (updatedData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...updatedData };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
     }
-    
-    navigate('/auth/login');
-  };
-
-  const verifyEmail = async (token: string) => {
-    try {
-      setLoading(true);
-      clearError();
-      await authService.verifyEmail(token);
-      navigate('/auth/login', { 
-        state: { message: 'Email verified successfully! You can now log in.' } 
-      });
-    } catch (error: any) {
-      setError(error.message || 'Email verification failed');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOTP = async (email: string, otp: string) => {
-    try {
-      setLoading(true);
-      clearError();
-      await authService.verifyOTP(email, otp);
-      navigate('/auth/login', { 
-        state: { message: 'OTP verified successfully! You can now log in.' } 
-      });
-    } catch (error: any) {
-      setError(error.message || 'OTP verification failed');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resendOTP = async (email: string) => {
-    try {
-      setLoading(true);
-      clearError();
-      await authService.resendOTP(email);
-      setError('OTP has been resent to your email');
-    } catch (error: any) {
-      setError(error.message || 'Failed to resend OTP');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const resendVerification = async (email: string) => {
-    try {
-      setLoading(true);
-      clearError();
-      await authService.resendVerification(email);
-      setError('Verification email has been resent');
-    } catch (error: any) {
-      setError(error.message || 'Failed to resend verification email');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const clearError = () => setError(null);
-
-  const value = {
-    user,
-    loading,
-    error,
-    setError,
-    login,
-    signup,
-    logout,
-    verifyEmail,
-    clearError,
-    verifyOTP,
-    resendOTP,
-    resendVerification,
-    isAuthenticated,
-    updateUser,
-    checkAdminAccess,
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, logout, signup, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

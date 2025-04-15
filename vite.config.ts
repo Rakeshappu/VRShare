@@ -12,6 +12,68 @@ export default defineConfig({
   server: {
     port: 8080,
     proxy: {
+      // Special proxy for auth routes - highest priority
+      '^/api/auth/(debug-token|admin-check|me)': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('Auth proxy error:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // Forward auth headers properly
+            const authHeader = req.headers.authorization;
+            if (authHeader) {
+              console.log('Forwarding Authorization header for auth route:', req.url);
+              proxyReq.setHeader('Authorization', authHeader);
+            } else {
+              console.warn('Missing Authorization header for auth route:', req.url);
+            }
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Auth Response:', proxyRes.statusCode, req.url);
+            
+            // Debug response headers
+            if (proxyRes.statusCode >= 400) {
+              console.log('Auth error response headers:', proxyRes.headers);
+            }
+          });
+        },
+      },
+      
+      // Dedicated proxy for admin routes with high priority
+      '^/api/admin/.*': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('Admin proxy error:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // Ensure admin auth headers are forwarded
+            const authHeader = req.headers.authorization;
+            if (authHeader) {
+              console.log('Forwarding Admin Authorization header for:', req.url);
+              proxyReq.setHeader('Authorization', authHeader);
+            } else {
+              console.warn('Missing Authorization header for admin route:', req.url);
+            }
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Admin Response:', proxyRes.statusCode, req.url);
+            
+            // Debug response headers
+            const headers = proxyRes.headers;
+            if (proxyRes.statusCode >= 400) {
+              console.log('Admin error response headers:', headers);
+            }
+          });
+        },
+      },
+      
+      // General API proxy with lower priority
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
@@ -48,54 +110,6 @@ export default defineConfig({
             }
           });
         },
-      },
-      // Dedicated proxy for admin routes with higher priority
-      '^/api/admin/.*': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('Admin proxy error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            // Ensure admin auth headers are forwarded
-            const authHeader = req.headers.authorization;
-            if (authHeader) {
-              console.log('Forwarding Admin Authorization header for:', req.url);
-              proxyReq.setHeader('Authorization', authHeader);
-            } else {
-              console.warn('Missing Authorization header for admin route:', req.url);
-            }
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Admin Response:', proxyRes.statusCode, req.url);
-            
-            // Debug response headers
-            const headers = proxyRes.headers;
-            if (proxyRes.statusCode >= 400) {
-              console.log('Admin error response headers:', headers);
-            }
-          });
-        },
-      },
-      // Specific proxy for auth debug-token route to prevent React Router issues
-      '/api/auth/debug-token': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, _options) => {
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            const authHeader = req.headers.authorization;
-            if (authHeader) {
-              console.log('Forwarding Authorization header for debug-token route');
-              proxyReq.setHeader('Authorization', authHeader);
-            }
-          });
-          proxy.on('proxyRes', (proxyRes, _req, _res) => {
-            console.log('Debug token response status:', proxyRes.statusCode);
-          });
-        }
       },
       '/uploads': {
         target: 'http://localhost:3000',

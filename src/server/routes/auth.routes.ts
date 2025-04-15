@@ -1,7 +1,7 @@
 
 import express from 'express';
 import { signup, login, verifyEmail, resendVerification } from '../controllers/auth.controller';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.middleware';
+import { authMiddleware, adminMiddleware, facultyMiddleware } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
@@ -21,15 +21,21 @@ router.get('/me', authMiddleware, (req, res) => {
 });
 
 // Admin-only routes
-router.get('/admin-check', authMiddleware, adminMiddleware, (req, res) => {
-  res.json({ 
-    message: 'You have admin access', 
-    user: req.user, 
-    timestamp: new Date().toISOString() 
-  });
+router.get('/admin-check', authMiddleware, (req, res) => {
+  // Check explicitly for admin role in the token
+  if (req.user && req.user.role === 'admin') {
+    res.json({ 
+      message: 'You have admin access', 
+      user: req.user, 
+      timestamp: new Date().toISOString() 
+    });
+  } else {
+    console.error(`Admin access denied for user with role: ${req.user?.role || 'undefined'}`);
+    res.status(403).json({ error: 'Admin access required' });
+  }
 });
 
-// Debug route to check token and role - fix this to handle errors properly
+// Debug route to check token and role
 router.get('/debug-token', authMiddleware, (req, res) => {
   try {
     // Ensure user data exists in request

@@ -146,6 +146,10 @@ api.interceptors.response.use(
               } else {
                 window.location.href = '/dashboard';
               }
+            } else {
+              // User has admin role in localStorage but still getting 403
+              // This might indicate the token is missing the role - suggest relogin
+              toast.error('Your admin session may have expired. Please try logging out and back in.');
             }
           } else {
             console.warn('No user info in localStorage');

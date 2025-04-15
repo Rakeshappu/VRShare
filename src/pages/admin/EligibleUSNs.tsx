@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
-import { UserPlus, Trash, FileSpreadsheet, Plus, Search, X, Check } from 'lucide-react';
+import { UserPlus, Trash, FileSpreadsheet, Plus, Search, X, Check, RefreshCcw } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { validateUserRoleWithToken, decodeToken } from '../../utils/authUtils';
 
 interface EligibleUSN {
   _id: string;
@@ -14,7 +15,7 @@ interface EligibleUSN {
 }
 
 export const EligibleUSNs = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [usns, setUSNs] = useState<EligibleUSN[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUSN, setNewUSN] = useState('');
@@ -29,6 +30,7 @@ export const EligibleUSNs = () => {
   const [bulkUSNs, setBulkUSNs] = useState('');
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [tokenRefreshing, setTokenRefreshing] = useState(false);
 
   const departments = [
     'Computer Science',
@@ -56,9 +58,7 @@ export const EligibleUSNs = () => {
       }
       
       try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(window.atob(base64));
+        const payload = decodeToken(token);
         console.log('Decoded token payload:', payload);
         setDebugInfo({
           tokenInfo: {
@@ -67,7 +67,8 @@ export const EligibleUSNs = () => {
             exp: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'Not found'
           },
           userInfo: userData,
-          isAdmin: userData && userData.role === 'admin' ? 'Yes' : 'No'
+          isAdmin: userData && userData.role === 'admin' ? 'Yes' : 'No',
+          isTokenValid: await validateUserRoleWithToken() ? 'Yes' : 'No'
         });
       } catch (e) {
         console.error('Error decoding token:', e);
@@ -105,6 +106,31 @@ export const EligibleUSNs = () => {
     } catch (error) {
       console.error('Error in checkAdminStatus:', error);
       setDebugInfo({ error: String(error) });
+    }
+  };
+
+  const handleForceRefreshToken = async () => {
+    setTokenRefreshing(true);
+    try {
+      if (!user) {
+        toast.error('You need to be logged in to refresh your session');
+        return;
+      }
+      
+      const currentUser = { ...user };
+      
+      await logout();
+      
+      toast.success('Please log back in to refresh your session');
+      
+      setTimeout(() => {
+        window.location.href = '/auth/login';
+      }, 1500);
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      toast.error('Failed to refresh session');
+    } finally {
+      setTokenRefreshing(false);
     }
   };
 
@@ -277,6 +303,15 @@ export const EligibleUSNs = () => {
           >
             Debug Admin Status
           </button>
+          
+          <button
+            onClick={handleForceRefreshToken}
+            disabled={tokenRefreshing}
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-600 text-white transition-colors"
+          >
+            <RefreshCcw size={18} className={tokenRefreshing ? 'animate-spin' : ''} />
+            {tokenRefreshing ? 'Refreshing...' : 'Refresh Token'}
+          </button>
         </div>
       </div>
 
@@ -284,6 +319,13 @@ export const EligibleUSNs = () => {
         <div className="bg-gray-100 p-4 mb-6 rounded-lg text-xs font-mono overflow-auto max-h-60">
           <h3 className="font-bold mb-2">Debug Information:</h3>
           <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+          {debugInfo.debugTokenResponse && !debugInfo.debugTokenResponse.isAdmin && (
+            <div className="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
+              <p className="font-bold">Token Problem Detected:</p>
+              <p>Your token doesn't have admin role information.</p>
+              <p>Click "Refresh Token" above to fix this issue by logging out and back in.</p>
+            </div>
+          )}
         </div>
       )}
 

@@ -53,8 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Decode and verify JWT token
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string, exp: number };
-      console.log('Token verification successful for debug-token API');
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role?: string, exp: number };
+      console.log('Token verification successful for debug-token API. Payload:', decoded);
       
       // Get user from database
       const user = await User.findById(decoded.userId).select('-password');
@@ -62,17 +62,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'User not found' });
       }
       
+      // Ensure role is always populated, either from token or from database
+      const role = decoded.role || user.role || 'student';
+      
       res.status(200).json({
         user: {
           userId: decoded.userId,
-          role: decoded.role,
+          role: role,
           email: user.email,
           fullName: user.fullName
         },
-        role: decoded.role,
-        isAdmin: decoded.role === 'admin',
-        isFaculty: decoded.role === 'faculty',
-        isStudent: decoded.role === 'student',
+        role: role,
+        isAdmin: role === 'admin',
+        isFaculty: role === 'faculty',
+        isStudent: role === 'student',
         tokenExpires: new Date(decoded.exp * 1000).toISOString(),
         timestamp: new Date().toISOString()
       });
