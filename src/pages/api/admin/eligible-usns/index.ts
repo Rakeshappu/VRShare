@@ -27,7 +27,7 @@ const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) 
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Handle CORS preflight
+  // Set CORS headers manually for OPTIONS requests
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
@@ -35,9 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).end();
   }
 
-  await runMiddleware(req, res, corsMiddleware);
-
   try {
+    // Handle CORS for all other requests
+    await runMiddleware(req, res, corsMiddleware);
     await connectDB();
     
     // Get authorization header
@@ -47,33 +47,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Not authenticated' });
     }
     
-    // Verify token
+    // Get JWT token from header
+    const token = authHeader.split(' ')[1];
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
+    
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET is not defined in environment variables');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+    
     try {
-      const token = authHeader.split(' ')[1];
-      const JWT_SECRET = process.env.JWT_SECRET;
-      
-      if (!JWT_SECRET) {
-        console.error('JWT_SECRET is not defined in environment variables');
-        return res.status(500).json({ error: 'Server configuration error' });
-      }
-      
+      // Verify and decode the token
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
-      
-      // Enhanced logging for debugging
       console.log('Token verification successful for eligible-usns API');
-      console.log('User role from token:', decoded.role);
       console.log('User ID from token:', decoded.userId);
-      console.log('Request method:', req.method);
+      console.log('User role from token:', decoded.role);
       
       // Ensure the user is an admin with more detailed logging
       if (decoded.role !== 'admin') {
-        console.log('Access denied: User role is', decoded.role);
-        console.log('Access requires admin role');
+        console.error(`Access denied for eligible-usns: User role is ${decoded.role}, requires admin`);
         return res.status(403).json({ error: 'Not authorized - Admin access required' });
       }
       
-      console.log('Admin access confirmed for user:', decoded.userId);
-
+      console.log('Admin access confirmed for eligible-usns API');
+      
       // GET - List all eligible USNs
       if (req.method === 'GET') {
         const { department, semester, isUsed } = req.query;
@@ -138,13 +135,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       return res.status(405).json({ error: 'Method not allowed' });
-    
     } catch (jwtError) {
       console.error('JWT verification failed:', jwtError);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
   } catch (error) {
     console.error('Error managing eligible USNs:', error);
-    return res.status(500).json({ error: 'Internal server error', details: (error as Error).message });
+    return res.status(500).json({ error: 'Internal server error', details: String(error) });
   }
 }

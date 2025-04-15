@@ -16,7 +16,7 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path,
+        ws: true,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('Proxy error:', err);
@@ -25,20 +25,27 @@ export default defineConfig({
             // Forward auth headers properly
             const authHeader = req.headers.authorization;
             if (authHeader) {
+              console.log('Forwarding Authorization header for:', req.url);
               proxyReq.setHeader('Authorization', authHeader);
+            } else if (req.url?.includes('/admin/')) {
+              console.warn('Missing Authorization header for admin route:', req.url);
             }
-            console.log('Sending Request:', req.method, req.url);
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
             console.log('Received Response:', proxyRes.statusCode, req.url);
+            
+            // Debug unauthorized access
+            if (proxyRes.statusCode === 401 || proxyRes.statusCode === 403) {
+              console.warn(`Access denied (${proxyRes.statusCode}) for URL:`, req.url);
+            }
           });
         },
       },
-      '/api/admin': {
+      // Dedicated proxy for admin routes with higher priority
+      '^/api/admin/.*': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
-        priority: 100, // Higher priority than the general /api route
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('Admin proxy error:', err);
@@ -47,10 +54,10 @@ export default defineConfig({
             // Ensure admin auth headers are forwarded
             const authHeader = req.headers.authorization;
             if (authHeader) {
+              console.log('Forwarding Admin Authorization header for:', req.url);
               proxyReq.setHeader('Authorization', authHeader);
-              console.log('Admin request with auth header:', req.method, req.url);
             } else {
-              console.warn('Admin request missing auth header:', req.method, req.url);
+              console.warn('Missing Authorization header for admin route:', req.url);
             }
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {

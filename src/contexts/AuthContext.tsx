@@ -20,6 +20,7 @@ interface AuthContextType {
   resendVerification: (email: string) => Promise<void>;
   isAuthenticated: boolean;
   updateUser: (userData: Partial<User>) => void;
+  checkAdminAccess: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Flag to control socket usage
   const useSocketFeatures = false; // Set to false to disable sockets completely
 
+  // Function to check if current user has admin access
+  const checkAdminAccess = async (): Promise<boolean> => {
+    try {
+      const response = await authService.verifyToken();
+      return response.user.role === 'admin';
+    } catch (error) {
+      console.error('Admin access check failed:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -47,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         const currentUser = await authService.getCurrentUser();
         if (currentUser) {
+          console.log('Auth initialized with user:', currentUser.role);
           setUser(currentUser);
           setIsAuthenticated(true);
           
@@ -96,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       clearError();
       const response = await authService.login({ email, password });
+      
+      console.log('Login successful with role:', response.user.role);
       setUser(response.user);
       setIsAuthenticated(true);
       
@@ -231,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resendVerification,
     isAuthenticated,
     updateUser,
+    checkAdminAccess,
   };
 
   return (

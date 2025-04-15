@@ -13,7 +13,11 @@ router.post('/resend-verification', resendVerification);
 
 // Protected routes that require authentication
 router.get('/me', authMiddleware, (req, res) => {
-  res.json({ user: req.user });
+  // Return full user object including role for client-side validation
+  res.json({ 
+    user: req.user,
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Admin-only routes

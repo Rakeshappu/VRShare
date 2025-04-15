@@ -47,6 +47,7 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
     return res.status(403).json({ error: 'Admin access required' });
   }
   
+  // Check if user has admin role - using strict equality comparison
   if (req.user.role !== 'admin') {
     console.error(`Admin access denied for user with role: ${req.user.role || 'undefined'}`);
     return res.status(403).json({ error: 'Admin access required' });

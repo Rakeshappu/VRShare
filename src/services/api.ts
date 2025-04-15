@@ -1,5 +1,4 @@
 
-//src\services\api.ts
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
@@ -43,7 +42,8 @@ api.interceptors.request.use(
           console.log('Token payload for admin request:', { 
             userId: payload.userId, 
             role: payload.role,
-            isAdmin: payload.role === 'admin'
+            isAdmin: payload.role === 'admin',
+            exp: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'undefined'
           });
         } catch (e) {
           console.warn('Could not decode token for debugging:', e);
@@ -99,10 +99,17 @@ api.interceptors.response.use(
       const errorMessage = error.response?.data?.error || 'Authentication failed';
       console.error('Auth error:', errorMessage);
       
-      // If token is explicitly reported as expired, try refreshing (not implemented yet)
+      // Refresh the page to get a new token if needed
       if (errorMessage.includes('expired')) {
-        // Future enhancement: implement token refresh
-        console.warn('Token expired, should implement refresh');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        console.log('Token expired, redirecting to login');
+        window.location.href = '/auth/login';
+        return Promise.reject({
+          message: 'Your session has expired. Please log in again.',
+          status: error.response.status,
+          data: error.response.data
+        });
       }
       
       // For now, just remove auth data and redirect to login
@@ -202,17 +209,6 @@ api.interceptors.response.use(
 // Add request cancellation support
 export const createCancelToken = () => {
   return axios.CancelToken.source();
-};
-
-// Helper to refresh token if needed (placeholder for future implementation)
-export const refreshAuthToken = async () => {
-  try {
-    // Implementation would go here
-    return false;
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    return false;
-  }
 };
 
 // Helper to check if user has admin role

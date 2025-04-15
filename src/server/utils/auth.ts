@@ -1,20 +1,31 @@
+
 import jwt from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-export const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+// Generate JWT token with user ID and role
+export const generateToken = (userId: string, role: string) => {
+  const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
+  return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: '7d' });
 };
 
-export const generateVerificationToken = (): string => {
-  return randomBytes(32).toString('hex');
-};
-
+// Verify JWT token
 export const verifyToken = (token: string) => {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Debug the decoded token
+    console.log('Decoded token:', decoded);
+    
+    // Validate that the decoded token has the required fields
+    const { userId, role } = decoded as { userId: string, role: string };
+    if (!userId || !role) {
+      console.error('Invalid token structure: Missing userId or role');
+      return null;
+    }
+    
+    return decoded;
   } catch (error) {
-    throw new Error('Invalid token');
+    console.error('Token verification failed:', error);
+    return null;
   }
 };
