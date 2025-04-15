@@ -6,8 +6,10 @@ import { MongoDBStatusBanner } from '../../components/auth/MongoDBStatusBanner';
 import { authService } from '../../services/auth.service';
 import { LoginFormData } from '../../types/auth';
 import { checkDatabaseConnection } from '../../services/resource.service';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Login = () => {
+  const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<any>(null);
   const navigate = useNavigate();
@@ -36,17 +38,10 @@ export const Login = () => {
         console.warn('MongoDB is not connected. Using fallback authentication.');
       }
       
-      const response = await authService.login(formData);
-      console.log('Login response:', response);
-      
-      if (response?.token) {
-        console.log('Login successful, navigating to dashboard...');
-        navigate('/dashboard');
-      } else {
-        console.error('No token received');
-        setError('Login failed - authentication error');
-      }
-    } catch (err) {
+      await login(formData.email, formData.password);
+      console.log('Login successful, navigating to dashboard...');
+      navigate('/dashboard');
+    } catch (err: any) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
     }

@@ -1,7 +1,7 @@
 
 import express from 'express';
 import { signup, login, verifyEmail, resendVerification } from '../controllers/auth.controller';
-import { authMiddleware, adminMiddleware, facultyMiddleware } from '../middleware/auth.middleware';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
@@ -57,7 +57,7 @@ router.get('/debug-token', authMiddleware, (req, res) => {
       isStudent: req.user.role === 'student',
       timestamp: new Date().toISOString()
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in debug-token route:', error);
     res.status(500).json({ 
       error: 'Error processing debug-token request',

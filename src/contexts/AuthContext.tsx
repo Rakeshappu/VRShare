@@ -11,6 +11,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signup: (userData: SignupData) => Promise<void>;
   updateUser: (updatedData: Partial<User>) => void;
+  error: string | null;
+  clearError: () => void;
+  isAuthenticated: boolean;
 }
 
 interface SignupData {
@@ -29,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user data exists in localStorage
@@ -74,8 +78,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   }, []);
 
+  const clearError = () => {
+    setError(null);
+  };
+
   const login = async (email: string, password: string) => {
     try {
+      setError(null);
       const response = await api.post(API_ROUTES.AUTH.LOGIN, { email, password });
       
       const { token, user } = response.data;
@@ -85,8 +94,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('user', JSON.stringify(user));
       
       setUser(user);
-    } catch (error) {
-      throw error;
+    } catch (err: any) {
+      const errorMessage = err.message || 'Login failed. Please try again.';
+      setError(errorMessage);
+      throw err;
     }
   };
 
@@ -98,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Clear user state
       setUser(null);
+      setError(null);
       
       // Optionally notify the server (if you have a logout endpoint)
       // await api.post(API_ROUTES.AUTH.LOGOUT);
@@ -111,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (userData: SignupData) => {
     try {
+      setError(null);
       const response = await api.post(API_ROUTES.AUTH.SIGNUP, userData);
       
       const { token, user } = response.data;
@@ -120,8 +133,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('user', JSON.stringify(user));
       
       setUser(user);
-    } catch (error) {
-      throw error;
+    } catch (err: any) {
+      const errorMessage = err.message || 'Signup failed. Please try again.';
+      setError(errorMessage);
+      throw err;
     }
   };
 
@@ -134,7 +149,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, signup, updateUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      signup, 
+      updateUser, 
+      error, 
+      clearError,
+      isAuthenticated: !!user
+    }}>
       {children}
     </AuthContext.Provider>
   );
