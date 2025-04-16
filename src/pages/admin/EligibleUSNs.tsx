@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
-import { UserPlus, Trash, FileSpreadsheet, Plus, Search, X, Check, RefreshCcw } from 'lucide-react';
+import { UserPlus, Trash, FileSpreadsheet, Plus, Search, X, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { validateUserRoleWithToken, decodeToken } from '../../utils/authUtils';
 
 interface EligibleUSN {
   _id: string;
@@ -15,7 +15,7 @@ interface EligibleUSN {
 }
 
 export const EligibleUSNs = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [usns, setUSNs] = useState<EligibleUSN[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUSN, setNewUSN] = useState('');
@@ -29,8 +29,6 @@ export const EligibleUSNs = () => {
   });
   const [bulkUSNs, setBulkUSNs] = useState('');
   const [showBulkAdd, setShowBulkAdd] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
-  const [tokenRefreshing, setTokenRefreshing] = useState(false);
 
   const departments = [
     'Computer Science',
@@ -40,99 +38,6 @@ export const EligibleUSNs = () => {
     'Mechanical',
     'Civil'
   ];
-
-  const checkAdminStatus = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setDebugInfo({ error: 'No token found in localStorage' });
-        return;
-      }
-
-      const userStr = localStorage.getItem('user');
-      const userData = userStr ? JSON.parse(userStr) : null;
-
-      if (userData) {
-        console.log('User from localStorage:', userData);
-        console.log('Role from localStorage:', userData.role);
-      }
-      
-      try {
-        const payload = decodeToken(token);
-        console.log('Decoded token payload:', payload);
-        setDebugInfo({
-          tokenInfo: {
-            userId: payload.userId,
-            role: payload.role,
-            exp: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'Not found'
-          },
-          userInfo: userData,
-          isAdmin: userData && userData.role === 'admin' ? 'Yes' : 'No',
-          isTokenValid: await validateUserRoleWithToken() ? 'Yes' : 'No'
-        });
-      } catch (e) {
-        console.error('Error decoding token:', e);
-      }
-
-      try {
-        const response = await api.get('/api/auth/debug-token');
-        console.log('Debug token response:', response.data);
-        setDebugInfo(prev => ({
-          ...prev,
-          debugTokenResponse: response.data
-        }));
-      } catch (e) {
-        console.error('Error calling debug-token:', e);
-        setDebugInfo(prev => ({
-          ...prev,
-          debugTokenError: String(e)
-        }));
-      }
-
-      try {
-        const adminCheckResponse = await api.get('/api/auth/admin-check');
-        console.log('Admin check response:', adminCheckResponse.data);
-        setDebugInfo(prev => ({
-          ...prev,
-          adminCheckResponse: adminCheckResponse.data
-        }));
-      } catch (e) {
-        console.error('Error calling admin-check:', e);
-        setDebugInfo(prev => ({
-          ...prev,
-          adminCheckError: String(e)
-        }));
-      }
-    } catch (error) {
-      console.error('Error in checkAdminStatus:', error);
-      setDebugInfo({ error: String(error) });
-    }
-  };
-
-  const handleForceRefreshToken = async () => {
-    setTokenRefreshing(true);
-    try {
-      if (!user) {
-        toast.error('You need to be logged in to refresh your session');
-        return;
-      }
-      
-      const currentUser = { ...user };
-      
-      await logout();
-      
-      toast.success('Please log back in to refresh your session');
-      
-      setTimeout(() => {
-        window.location.href = '/auth/login';
-      }, 1500);
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      toast.error('Failed to refresh session');
-    } finally {
-      setTokenRefreshing(false);
-    }
-  };
 
   const loadUSNs = async () => {
     setLoading(true);
@@ -163,9 +68,9 @@ export const EligibleUSNs = () => {
     } catch (error: any) {
       console.error('Failed to load eligible USNs:', error);
       toast.error('Failed to load eligible USNs');
-      if (error.status === 403) {
-        console.log('Got 403 forbidden, checking admin status...');
-        await checkAdminStatus();
+      
+      if (error.status === 403 && error.data?.message) {
+        toast.error(error.data.message);
       }
     } finally {
       setLoading(false);
@@ -174,7 +79,6 @@ export const EligibleUSNs = () => {
 
   useEffect(() => {
     loadUSNs();
-    checkAdminStatus();
   }, [filter]);
 
   const handleAddUSN = async (e: React.FormEvent) => {
@@ -209,10 +113,7 @@ export const EligibleUSNs = () => {
       loadUSNs();
     } catch (error: any) {
       console.error('Failed to add USN:', error);
-      toast.error(error.message || 'Failed to add USN');
-      if (error.status === 403) {
-        await checkAdminStatus();
-      }
+      toast.error(error.data?.error || error.message || 'Failed to add USN');
     }
   };
 
@@ -296,38 +197,8 @@ export const EligibleUSNs = () => {
               </>
             )}
           </button>
-          
-          <button
-            onClick={checkAdminStatus}
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-500 hover:bg-gray-600 text-white transition-colors"
-          >
-            Debug Admin Status
-          </button>
-          
-          <button
-            onClick={handleForceRefreshToken}
-            disabled={tokenRefreshing}
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-600 text-white transition-colors"
-          >
-            <RefreshCcw size={18} className={tokenRefreshing ? 'animate-spin' : ''} />
-            {tokenRefreshing ? 'Refreshing...' : 'Refresh Token'}
-          </button>
         </div>
       </div>
-
-      {debugInfo && (
-        <div className="bg-gray-100 p-4 mb-6 rounded-lg text-xs font-mono overflow-auto max-h-60">
-          <h3 className="font-bold mb-2">Debug Information:</h3>
-          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-          {debugInfo.debugTokenResponse && !debugInfo.debugTokenResponse.isAdmin && (
-            <div className="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-              <p className="font-bold">Token Problem Detected:</p>
-              <p>Your token doesn't have admin role information.</p>
-              <p>Click "Refresh Token" above to fix this issue by logging out and back in.</p>
-            </div>
-          )}
-        </div>
-      )}
 
       {showBulkAdd ? (
         <div className="bg-white p-6 rounded-lg shadow mb-6">

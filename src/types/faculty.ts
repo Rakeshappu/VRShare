@@ -1,93 +1,128 @@
 
+// Activity interface
+export interface Activity {
+  _id?: string;
+  user: string;
+  type: 'view' | 'download' | 'like' | 'comment' | 'share' | 'upload';
+  resource: string;
+  details?: any;
+  timestamp: string | Date;
+}
+
+// SubjectFolder interface
+export interface SubjectFolder {
+  id: string;
+  name: string;
+  code: string;
+  department: string;
+  semester: number;
+  description?: string;
+  resourceCount: number;
+  createdAt: string;
+  // Legacy fields
+  subjectName?: string;
+  lecturerName?: string;
+}
+
+// UploadFormData for resource uploads
+export interface UploadFormData {
+  title: string;
+  description: string;
+  type: 'document' | 'video' | 'link' | 'note';
+  subject: string;
+  semester: number;
+  file?: File;
+  link?: string;
+  category?: string;
+  placementCategory?: string;
+}
+
+// Faculty Resource interface
+export interface FacultyResource {
+  id: string;
+  _id?: string;
+  title: string;
+  description: string;
+  type: 'document' | 'video' | 'link' | 'note';
+  subject: string;
+  semester: number;
+  category?: 'study' | 'placement' | 'common';
+  placementCategory?: string;
+  uploadDate: string;
+  fileName?: string;
+  fileUrl?: string;
+  link?: string;
+  fileContent?: string;
+  createdAt: string;
+  stats: {
+    views: number;
+    likes: number;
+    comments: number;
+    downloads: number;
+    lastViewed: string;
+  };
+  uploadedBy?: string;
+  tags?: string[];
+}
+
+// ResourceCommentData interface for comments
+export interface ResourceCommentData {
+  resourceId: string;
+  content: string;
+}
+
+// ResourceStats interface
 export interface ResourceStats {
   views: number;
   likes: number;
   comments: number;
   downloads: number;
-  lastViewed: string;
+  lastViewed?: string;
+  dailyViews?: Array<{
+    date: string;
+    count: number;
+  }>;
 }
 
-export interface ResourceAnalytics extends ResourceStats {
-  dailyViews: { date: string; count: number }[];
-  topDepartments: { name: string; count: number }[];
-  studentFeedback: { rating: number; count: number }[];
+// ResourceFilters interface
+export interface ResourceFilters {
+  type?: string;
+  semester?: number;
+  subject?: string;
+  sortOrder?: 'newest' | 'oldest' | 'popular';
 }
 
-export interface FacultyResource {
-  id: string;
-  title: string;
-  description: string;
-  type: 'document' | 'video' | 'note' | 'link';
-  subject: string;
-  semester: number;
-  uploadDate: string;
-  fileUrl?: string;
-  fileSize?: number;
-  // Add actual file content and name to open documents
-  fileContent?: string;
-  fileName?: string;
-  // For link resources
-  link?: string;
-  stats: ResourceStats;
-  // Add folder information
-  folderId?: string;
-  // Add placement category
-  category?: string;
-  placementCategory?: string;
-}
-
-export interface UploadFormData {
-  title: string;
-  description: string;
-  type: FacultyResource['type'];
-  subject: string;
-  semester: number;
-  file?: File;
-  link?: string;
-  folderId?: string; // Add folder ID for organization
-  category?: string; // Add category field
-  placementCategory?: string; // Add placement category field
-}
-
-export interface SubjectFolder {
-  id: string;
-  name: string;
-  semester: number;
-  lecturerName: string;
-  resourceCount: number;
-  createdAt: string;
-  subjectName?: string; // Add optional subjectName for compatibility
-}
-
-export interface ResourceCategory {
-  id: string;
-  name: 'semester' | 'common' | 'placement';
-  displayName: string;
-  description: string;
-  iconName: string;
-}
-
-// Add this new interface for subject data management
+// Subject data for creation
 export interface SubjectData {
-  subjectName: string;
-  lecturerName: string;
-  semester: number;
-}
-
-// Define a new interface for folder structure
-export interface ResourceFolder {
-  id: string;
   name: string;
+  code: string;
+  department: string;
   semester: number;
-  createdAt: string;
-  resources: FacultyResource[];
+  description?: string;
+  subjectName?: string; // For backward compatibility
+  lecturerName?: string; // For backward compatibility
 }
 
-// Add interface for declaring window properties
-declare global {
-  interface Window {
-    sharedResources: FacultyResource[];
-    subjectFolders: SubjectFolder[];
-    resourceFolders: ResourceFolder[];
-  }
+// Pagination interface
+export interface PaginationData {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+// Search result interface
+export interface SearchResource {
+  id: string;
+  title: string;
+  description?: string;
+  type: string;
+  subject?: string;
+  semester?: number;
+  source?: string;
+  url?: string;
+  thumbnailUrl?: string;
+  publishDate?: string;
+  author?: string;
+  score?: number;
 }

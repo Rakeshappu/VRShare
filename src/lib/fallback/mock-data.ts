@@ -78,41 +78,45 @@ export const mockResources = [
 export const mockSubjectFolders: SubjectFolder[] = [
   {
     id: 'sf1',
-    name: 'Computer Science',
+    subjectName: 'Computer Science',
+    lecturerName: 'Dr. John Smith',
     semester: 3,
     resourceCount: 15,
+    createdAt: new Date('2023-01-01').toISOString(),
   },
   {
     id: 'sf2',
-    name: 'Mathematics',
+    subjectName: 'Mathematics',
+    lecturerName: 'Dr. Emily Johnson',
     semester: 4,
     resourceCount: 12,
+    createdAt: new Date('2023-01-02').toISOString(),
   },
   {
     id: 'sf3',
-    name: 'Economics',
+    subjectName: 'Economics',
+    lecturerName: 'Prof. Michael Brown',
     semester: 2,
     resourceCount: 8,
+    createdAt: new Date('2023-01-03').toISOString(),
   },
   {
     id: 'sf4',
-    name: 'Physics',
+    subjectName: 'Physics',
+    lecturerName: 'Dr. Sarah Williams',
     semester: 3,
     resourceCount: 10,
+    createdAt: new Date('2023-01-04').toISOString(),
   },
   {
     id: 'sf5',
-    name: 'Chemistry',
+    subjectName: 'Chemistry',
+    lecturerName: 'Prof. Robert Davis',
     semester: 1,
     resourceCount: 6,
+    createdAt: new Date('2023-01-05').toISOString(),
   },
 ];
-
-// Add mock data to window for global access in development
-if (process.env.NODE_ENV === 'development') {
-  window.mockResources = mockResources;
-  window.subjectFolders = mockSubjectFolders;
-}
 
 // Helper function to get resources by query
 export function getMockResourcesByQuery(query: any) {

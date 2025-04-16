@@ -14,11 +14,11 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // Verify admin access for admin routes
   useEffect(() => {
-    if (!loading && user && role === 'admin' && user.role === 'admin') {
+    if (!isLoading && user && role === 'admin' && user.role === 'admin') {
       // Verify admin status with the server for extra security
       api.get(API_ROUTES.AUTH.ADMIN_CHECK)
         .then(response => {
@@ -30,23 +30,23 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
         })
         .catch(error => {
           console.error('Admin verification failed:', error);
-          if (error.status === 403) {
+          if (error.response?.status === 403) {
             toast.error('Admin privileges could not be verified. Please try logging out and back in.');
             forceReloginIfNeeded();
           }
         });
     }
-  }, [user, loading, role]);
+  }, [user, isLoading, role]);
 
   // Debug logs for authentication check
   console.log('PrivateRoute - Authentication check:', { 
-    isLoading: loading, 
+    isLoading, 
     userExists: !!user, 
-    userRole: user?.role, 
+    userRole: user?.role || 'undefined', 
     requiredRole: role 
   });
 
-  if (loading) {
+  if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
     </div>;
@@ -57,7 +57,8 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
     return <Navigate to="/auth/login" />;
   }
 
-  console.log('PrivateRoute - Current user role:', user.role);
+  // Add debugging to see what roles we're working with
+  console.log('PrivateRoute - Current user role:', user.role || 'undefined');
   console.log('PrivateRoute - Required role:', role);
 
   // Admin can access all routes
@@ -68,10 +69,13 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
 
   // For non-admin users, check role-specific routes
   if (role && user.role !== role) {
-    console.log(`Access denied: User is ${user.role} but route requires ${role}`);
+    console.log(`Access denied: User is ${user.role || 'undefined'} but route requires ${role}`);
     
-    // Show toast notification for unauthorized access
-    toast.error(`This section requires ${role} access`);
+    // Show toast notification for unauthorized access - only once
+    toast.error(`This section requires ${role} access`, {
+      id: 'unauthorized-access',
+      duration: 3000
+    });
     
     if (user.role === 'faculty') {
       return <Navigate to="/faculty/dashboard" />;

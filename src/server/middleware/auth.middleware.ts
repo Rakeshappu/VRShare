@@ -1,6 +1,8 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/auth';
+import { User } from '../../lib/db/models/User';
+import mongoose from 'mongoose';
 
 // Extend the Request type to include user
 declare global {
@@ -30,8 +32,21 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     // Add user info to request object
     req.user = decoded;
     
+    // If the token doesn't have a role, try to get it from the database
+    if (!decoded.role) {
+      try {
+        const user = await User.findById(decoded.userId).select('role');
+        if (user) {
+          req.user.role = user.role;
+          console.log(`Added missing role ${user.role} to request user from database`);
+        }
+      } catch (dbError) {
+        console.error('Error fetching user role from database:', dbError);
+      }
+    }
+    
     // Log successful authentication with more details
-    console.log(`Authenticated user: ${decoded.userId} with role: ${decoded.role || 'undefined'}`);
+    console.log(`Authenticated user: ${decoded.userId} with role: ${req.user.role || 'undefined'}`);
     
     next();
   } catch (error: any) {
@@ -41,9 +56,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 };
 
 // Admin-only middleware - reuse this for admin routes
-export const adminMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const adminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   // First apply the auth middleware to verify the token
-  authMiddleware(req, res, (err) => {
+  authMiddleware(req, res, async (err) => {
     if (err) {
       return next(err);
     }
@@ -56,19 +71,35 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
       return res.status(403).json({ error: 'Admin access required' });
     }
     
-    // Check if user has admin role in database
-    // This is where we add a fallback for users with admin access in DB but not in token
-    if (req.user.role !== 'admin') {
+    // Check if user has admin role in token
+    if (req.user.role === 'admin') {
+      console.log('Admin access granted from token for user:', req.user.userId);
+      return next();
+    }
+    
+    // Fallback: If token doesn't have role, check database
+    try {
       // Check against database to see if this user should have admin access
+      if (mongoose.connection.readyState === 1) { // Only check if database is connected
+        const user = await User.findById(req.user.userId).select('role');
+        
+        if (user && user.role === 'admin') {
+          console.log('Admin access granted from database for user:', req.user.userId);
+          // Update the request user object with the role for downstream middleware
+          req.user.role = 'admin';
+          return next();
+        }
+      }
+      
       console.error(`Admin access denied for user with role: ${req.user.role || 'undefined'}`);
       return res.status(403).json({ 
         error: 'Admin access required',
         message: 'Your token does not contain admin role information. Please log out and log back in.'
       });
+    } catch (dbError) {
+      console.error('Error checking admin status in database:', dbError);
+      return res.status(500).json({ error: 'Internal server error' });
     }
-    
-    console.log('Admin access granted for user:', req.user.userId);
-    next();
   });
 };
 

@@ -9,9 +9,8 @@ import { useNavigate } from 'react-router-dom';
 
 interface ResourceListProps {
   resources: FacultyResource[];
-  onViewAnalytics: (resourceId: string) => void;
-  showDeleteButton?: boolean;
   onResourceDeleted?: () => void;
+  showDeleteButton?: boolean;
 }
 
 type FilterOption = 'all' | 'document' | 'video' | 'note' | 'link';
@@ -23,7 +22,7 @@ declare global {
   }
 }
 
-export const ResourceList = ({ resources, onViewAnalytics, showDeleteButton = false, onResourceDeleted }: ResourceListProps) => {
+export const ResourceList = ({ resources, showDeleteButton = false, onResourceDeleted }: ResourceListProps) => {
   const [filterType, setFilterType] = useState<FilterOption>('all');
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [selectedSemester, setSelectedSemester] = useState<number | 'all'>('all');
@@ -190,7 +189,7 @@ export const ResourceList = ({ resources, onViewAnalytics, showDeleteButton = fa
         <div className="space-y-4">
           {filteredResources.map((resource) => (
             <div
-              key={resource.id || resource._id}
+              key={resource.id}
               className="border rounded-lg p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
@@ -215,12 +214,12 @@ export const ResourceList = ({ resources, onViewAnalytics, showDeleteButton = fa
                 <div className="flex items-center space-x-3">
                   {showDeleteButton && (
                     <button
-                      onClick={() => handleDeletePrompt(resource.id || resource._id || '')}
-                      disabled={isDeleting && deletingId === (resource.id || resource._id)}
+                      onClick={() => handleDeletePrompt(resource.id)}
+                      disabled={isDeleting && deletingId === resource.id}
                       className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50 cursor-pointer"
                       type="button"
                     >
-                      {isDeleting && deletingId === (resource.id || resource._id) ? (
+                      {isDeleting && deletingId === resource.id ? (
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
                       ) : (
                         <Trash2 className="h-5 w-5" />
@@ -229,7 +228,7 @@ export const ResourceList = ({ resources, onViewAnalytics, showDeleteButton = fa
                     </button>
                   )}
                   <button
-                    onClick={() => handleViewAnalytics(resource.id || resource._id || '')}
+                    onClick={() => handleViewAnalytics(resource.id)}
                     className="flex items-center space-x-1 text-indigo-600 hover:text-indigo-700 cursor-pointer"
                     type="button"
                   >

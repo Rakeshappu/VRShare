@@ -82,7 +82,7 @@ async function fallbackSearch(req: Request, res: Response) {
 
   try {
     // Import the Resource model
-    const { Resource } = await import('../../lib/db/models/Resource');
+    const Resource = await import('../../lib/db/models/Resource').then(m => m.Resource);
     
     // Build the query
     const query: any = {};
@@ -116,7 +116,7 @@ async function fallbackSearch(req: Request, res: Response) {
     const total = await Resource.countDocuments(query);
     
     // Format results to match Elasticsearch response format
-    const results = resources.map(resource => ({
+    const results = resources.map((resource: any) => ({
       id: resource._id ? resource._id.toString() : '',
       title: resource.title,
       description: resource.description,

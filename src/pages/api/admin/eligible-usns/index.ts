@@ -5,6 +5,7 @@ import { EligibleUSN } from '../../../../lib/db/models/EligibleUSN';
 import { User } from '../../../../lib/db/models/User';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
+import { checkAdminInDatabase } from '../../_middleware';
 
 // CORS middleware with improved origins and headers
 const corsMiddleware = cors({
@@ -51,25 +52,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = authHeader.split(' ')[1];
     const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
     
-    if (!JWT_SECRET) {
-      console.error('JWT_SECRET is not defined in environment variables');
-      return res.status(500).json({ error: 'Server configuration error' });
-    }
-    
     try {
       // Verify and decode the token
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role?: string };
       console.log('Token verification successful for eligible-usns API');
       console.log('User ID from token:', decoded.userId);
       console.log('User role from token:', decoded.role);
       
-      // Ensure the user is an admin with more detailed logging
+      // Check admin role - first from token, then from database as fallback
       if (decoded.role !== 'admin') {
-        console.error(`Access denied for eligible-usns: User role is ${decoded.role || 'undefined'}, requires admin`);
-        return res.status(403).json({ error: 'Not authorized - Admin access required' });
+        console.log('Token missing admin role, checking database...');
+        const isAdmin = await checkAdminInDatabase(decoded.userId);
+        if (!isAdmin) {
+          console.error(`Access denied for user ${decoded.userId} - not an admin`);
+          return res.status(403).json({ 
+            error: 'Admin access required',
+            message: 'Your token does not contain admin role information. Please log out and log back in.'
+          });
+        }
+        console.log('Admin role verified from database for:', decoded.userId);
+      } else {
+        console.log('Admin role verified from token for:', decoded.userId);
       }
-      
-      console.log('Admin access confirmed for eligible-usns API');
       
       // GET - List all eligible USNs
       if (req.method === 'GET') {

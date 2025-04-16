@@ -147,7 +147,45 @@ export default function AnalyticsPage() {
   
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Content Analytics</h1>
+      <h1 className="text-2xl font-bold mb-6 dark:text-gray-200">Content Analytics</h1>
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-lg font-semibold mb-4">Resource Analytics</h2>
+        <div className="mb-6">
+          <label htmlFor="resourceSelect" className="block text-sm font-medium text-gray-700 mb-2">
+            Select Resource to View Analytics:
+          </label>
+          <select
+            id="resourceSelect"
+            className="block w-full max-w-lg rounded-md border border-gray-300 py-2 px-3 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+            value={selectedResourceId}
+            onChange={handleResourceChange}
+          >
+            <option value="">Select a resource...</option>
+            {resources.map((resource) => (
+              <option key={resource.id || resource._id} value={resource.id || resource._id}>
+                {resource.title} (Semester {resource.semester}, {resource.subject})
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {loading ? (
+          <div className="flex justify-center items-center h-40">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          </div>
+        ) : selectedResourceId && resourceAnalytics ? (
+          <ResourceAnalyticsView 
+            analytics={resourceAnalytics} 
+            resourceTitle={selectedResourceTitle}
+            resourceId={selectedResourceId}
+          />
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <p>Select a resource to view detailed analytics</p>
+          </div>
+        )}
+      </div>
+      
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <StatCard title="Content Uploaded" value={resources.length} icon="📚" color="bg-blue-50" />
@@ -205,43 +243,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">Resource Analytics</h2>
-        <div className="mb-6">
-          <label htmlFor="resourceSelect" className="block text-sm font-medium text-gray-700 mb-2">
-            Select Resource to View Analytics:
-          </label>
-          <select
-            id="resourceSelect"
-            className="block w-full max-w-lg rounded-md border border-gray-300 py-2 px-3 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-            value={selectedResourceId}
-            onChange={handleResourceChange}
-          >
-            <option value="">Select a resource...</option>
-            {resources.map((resource) => (
-              <option key={resource.id || resource._id} value={resource.id || resource._id}>
-                {resource.title} (Semester {resource.semester}, {resource.subject})
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-          </div>
-        ) : selectedResourceId && resourceAnalytics ? (
-          <ResourceAnalyticsView 
-            analytics={resourceAnalytics} 
-            resourceTitle={selectedResourceTitle}
-            resourceId={selectedResourceId}
-          />
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <p>Select a resource to view detailed analytics</p>
-          </div>
-        )}
-      </div>
+
     </div>
   );
 }

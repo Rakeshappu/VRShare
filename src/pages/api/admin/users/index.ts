@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '../../../../lib/db/connect';
 import { User } from '../../../../lib/db/models/User';
 import jwt from 'jsonwebtoken';
+import { checkAdminInDatabase } from '../../_middleware';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Handle CORS preflight
@@ -22,11 +23,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Verify token
       const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role: string };
+      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role?: string };
       
-      // Ensure the user is an admin
-      if (decoded.role !== 'admin') {
-        return res.status(403).json({ error: 'Not authorized' });
+      console.log('Token decoded for user management:', decoded);
+      
+      // Ensure the user is an admin (check token first, then database)
+      let isAdmin = decoded.role === 'admin';
+      
+      if (!isAdmin) {
+        console.log('Role not found in token, checking database...');
+        isAdmin = await checkAdminInDatabase(decoded.userId);
+        
+        if (!isAdmin) {
+          return res.status(403).json({ error: 'Not authorized' });
+        }
+        console.log('Admin verified from database');
+      } else {
+        console.log('Admin verified from token');
       }
       
       // Get all users
@@ -65,11 +79,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Verify token
       const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role: string };
+      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role?: string };
       
-      // Ensure the user is an admin
-      if (decoded.role !== 'admin') {
-        return res.status(403).json({ error: 'Not authorized' });
+      // Ensure the user is an admin (check token first, then database)
+      let isAdmin = decoded.role === 'admin';
+      
+      if (!isAdmin) {
+        isAdmin = await checkAdminInDatabase(decoded.userId);
+        if (!isAdmin) {
+          return res.status(403).json({ error: 'Not authorized' });
+        }
       }
       
       const { userId } = req.body;

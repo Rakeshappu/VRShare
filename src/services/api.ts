@@ -17,6 +17,9 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
+      // Always add token to request
+      config.headers.Authorization = `Bearer ${token}`;
+      
       const isAdminRoute = config.url?.includes('/admin/');
       const isAuthAdminRoute = config.url?.includes('/auth/admin-check');
       
@@ -30,15 +33,13 @@ api.interceptors.request.use(
           
           if (!payload?.role || payload.role !== 'admin') {
             console.warn('Token missing admin role for admin route:', config.url);
-            // We'll still send the request with the token, but log this warning
+            // We'll still send the request with the token
+            // The server will check the database for admin status as a fallback
           }
         } catch (error) {
           console.error('Error processing token for admin request:', error);
         }
       }
-      
-      console.log('Setting Authorization header:', `Bearer ${token.substring(0, 15)}...`);
-      config.headers.Authorization = `Bearer ${token}`;
     }
     
     // Debug log request
@@ -105,7 +106,7 @@ api.interceptors.response.use(
             
             // If user thinks they're admin but server disagrees
             if (userData.role === 'admin') {
-              toast.error('Your admin session needs to be refreshed. Please log out and log back in.');
+              toast.error((data as any)?.message || 'Your admin session needs to be refreshed. Please log out and log back in.');
             }
           } catch (e) {
             console.error('Error parsing user data:', e);

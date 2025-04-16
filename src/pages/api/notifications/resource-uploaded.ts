@@ -4,6 +4,8 @@ import connectDB from '../../../lib/db/connect';
 import { notifyResourceUpload } from '../../../lib/realtime/socket';
 import jwt from 'jsonwebtoken';
 import { User } from '../../../lib/db/models/User';
+import { Notification } from '../../../lib/db/models/Notification';
+import mongoose from 'mongoose';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Handle CORS preflight
@@ -28,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = authHeader.split(' ')[1];
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+      decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role?: string };
       if (!decoded || !decoded.userId) {
         return res.status(401).json({ error: 'Invalid token' });
       }
@@ -43,9 +45,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Verify the user is a faculty member
+    // Verify the user is a faculty member or admin
     if (user.role !== 'faculty' && user.role !== 'admin') {
-      return res.status(403).json({ error: 'Only faculty members can send resource notifications' });
+      return res.status(403).json({ error: 'Only faculty members and admins can send resource notifications' });
     }
     
     const { resourceId, facultyName, resourceTitle, semester } = req.body;
@@ -56,7 +58,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log(`API route: sending notification for resource ${resourceId} by ${facultyName || user.fullName} for semester ${semester}`);
     
-    // Explicitly await the notification process to complete
+    // Create database notifications for students in the specified semester
+    try {
+      // Find students in the specified semester
+      const query = semester ? { role: 'student', semester: Number(semester) } : { role: 'student' };
+      const students = await User.find(query).select('_id');
+      
+      console.log(`Found ${students.length} students to notify in semester ${semester || 'all'}`);
+      
+      // Create notification for each student
+      const notificationData = students.map(student => ({
+        userId: student._id,
+        message: `${facultyName || user.fullName} uploaded a new resource: ${resourceTitle}`,
+        resourceId: new mongoose.Types.ObjectId(resourceId),
+        read: false,
+        createdAt: new Date()
+      }));
+      
+      if (notificationData.length > 0) {
+        await Notification.insertMany(notificationData);
+        console.log(`Created ${notificationData.length} database notifications`);
+      }
+    } catch (dbError) {
+      console.error('Error creating database notifications:', dbError);
+      // Continue with real-time notifications even if database notifications fail
+    }
+    
+    // Send real-time notifications through socket.io
     try {
       await notifyResourceUpload(
         resourceId, 

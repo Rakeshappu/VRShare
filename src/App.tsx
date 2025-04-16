@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Header } from './components/layout/Header';
@@ -19,6 +20,7 @@ import { SubjectDetailPage } from './pages/study/SubjectDetailPage';
 import UsersManagement from './pages/admin/UsersManagement';
 import AllResources from './pages/admin/AllResources';
 import EligibleUSNs from './pages/admin/EligibleUSNs';
+import CompetitiveProgramming from './pages/competitive/CompetitiveProgramming';
 
 import AnalyticsPage from './pages/faculty/AnalyticsPage';
 import { StudentsPage } from './pages/faculty/StudentsPage';
@@ -27,9 +29,24 @@ import { TrashPage as FacultyTrashPage } from './pages/faculty/TrashPage';
 import { SettingsPage as FacultySettingsPage } from './pages/faculty/SettingsPage';
 
 import { UploadWorkflow } from './components/faculty/UploadWorkflow';
+import { authService } from './services/auth.service';
+import { HomePage } from './pages/home/HomePage';
 
 function App() {
-  const skipAuth = true;
+  // Determine if we should skip auth based on local storage token
+  const skipAuth = !!localStorage.getItem('token');
+  
+  // Get the user role from local storage
+  const userRole = authService.getUserRole();
+  
+  // Decide the initial redirect based on user role
+  const getInitialRedirect = () => {
+    if (!skipAuth) return '/auth/login';
+    
+    if (userRole === 'admin') return '/admin/dashboard';
+    if (userRole === 'faculty') return '/faculty/dashboard';
+    return '/dashboard';
+  };
 
   return (
     <Router>
@@ -38,16 +55,13 @@ function App() {
           <Routes>
             <Route 
               path="/" 
-              element={
-                skipAuth ? 
-                <Navigate to="/dashboard" replace /> : 
-                <Navigate to="/auth" replace />
-              } 
+              element={<HomePage />} 
             />
             
             <Route path="/auth/*" element={<AuthPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             
+            {/* Student routes */}
             <Route
               path="/dashboard"
               element={
@@ -77,6 +91,7 @@ function App() {
                 </PrivateRoute>
               }
             />
+            
             <Route
               path="/study/:subject"
               element={
@@ -162,6 +177,7 @@ function App() {
               }
             />
             
+            {/* Faculty routes */}
             <Route
               path="/faculty/dashboard"
               element={
@@ -276,6 +292,7 @@ function App() {
               }
             />
             
+            {/* Admin routes */}
             <Route
               path="/admin/dashboard"
               element={
@@ -336,11 +353,7 @@ function App() {
                     <Sidebar />
                     <div className="flex-1">
                       <Header />
-                      <AllResources 
-                        onViewAnalytics={(resourceId) => {
-                          window.location.href = `/admin/resources/${resourceId}/analytics`;
-                        }}
-                      />
+                      <AllResources />
                     </div>
                   </div>
                 </PrivateRoute>
@@ -389,6 +402,22 @@ function App() {
                 </PrivateRoute>
               }
             />
+
+            {/* New Competitive Programming page - Admin only */}
+            <Route
+              path="/competitive-programming"
+              element={
+                <PrivateRoute role="admin">
+                  <div className="flex">
+                    <Sidebar />
+                    <div className="flex-1">
+                      <Header />
+                      <CompetitiveProgramming />
+                    </div>
+                  </div>
+                </PrivateRoute>
+              }
+            />
             
             <Route
               path="/profile"
@@ -404,6 +433,11 @@ function App() {
                 </PrivateRoute>
               }
             />
+
+            {/* Add redirects for incorrect routes */}
+            <Route path="/dashboard/*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/faculty/*" element={<Navigate to="/faculty/dashboard" replace />} />
+            <Route path="/admin/*" element={<Navigate to="/admin/dashboard" replace />} />
           </Routes>
         </div>
       </AuthProvider>

@@ -86,7 +86,7 @@ export const SearchBar = () => {
       
       // If no results, show a message
       if (results.length === 0) {
-        toast.info('No local resources found. Showing AI-powered results from the web.');
+        toast.success('No local resources found. Showing AI-powered results from the web.');
       }
       
     } catch (error: any) {
