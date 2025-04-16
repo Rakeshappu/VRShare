@@ -1,7 +1,8 @@
 
-import { Suspense, lazy, useState } from 'react';
-import { Loader2, BookOpen, Youtube, FileText, Search } from 'lucide-react';
+import { Suspense, lazy, useState, useEffect } from 'react';
+import { Loader2, BookOpen, Youtube, FileText, Search, Terminal } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 // Lazy loaded components
 const EnhancedAISearch = lazy(() => import('../../components/search/EnhancedAISearch'));
@@ -13,9 +14,31 @@ import { getResources } from '../../services/resource.service';
 
 export const HomePage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [resources, setResources] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch resources on component mount
+  useEffect(() => {
+    const fetchResourcesData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getResources();
+        if (Array.isArray(data)) {
+          setResources(data);
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching resources:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchResourcesData();
+  }, []);
 
   const fetchPagedResources = async (page: number, limit: number, filters: any = {}) => {
     try {
+      setIsLoading(true);
       const resources = await getResources({
         page,
         limit,
@@ -25,6 +48,7 @@ export const HomePage = () => {
         sortOrder: filters.sortOrder,
       });
       
+      setIsLoading(false);
       return {
         resources: Array.isArray(resources) ? resources : [],
         total: Array.isArray(resources) ? resources.length : 0,
@@ -32,6 +56,7 @@ export const HomePage = () => {
       };
     } catch (error) {
       console.error('Error fetching resources:', error);
+      setIsLoading(false);
       return { resources: [], total: 0, totalPages: 1 };
     }
   };
@@ -50,7 +75,7 @@ export const HomePage = () => {
       </header>
 
       <div className="mb-6">
-        <nav className="flex border-b border-gray-200">
+        <nav className="flex overflow-x-auto pb-1 border-b border-gray-200">
           <button
             className={`px-4 py-2 border-b-2 font-medium text-sm ${
               activeTab === 'dashboard'
@@ -95,6 +120,17 @@ export const HomePage = () => {
             <FileText className="inline-block h-4 w-4 mr-2" />
             Course Materials
           </button>
+          <button
+            className={`px-4 py-2 border-b-2 font-medium text-sm ${
+              activeTab === 'competitive'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+            onClick={() => setActiveTab('competitive')}
+          >
+            <Terminal className="inline-block h-4 w-4 mr-2" />
+            Competitive Programming
+          </button>
         </nav>
       </div>
 
@@ -131,6 +167,26 @@ export const HomePage = () => {
                 </Suspense>
               </div>
             </div>
+
+            {/* Competitive Programming Card */}
+            <div className="mt-8">
+              <Link 
+                to="/competitive-programming"
+                className="block p-6 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-2">Competitive Programming</h3>
+                    <p className="text-blue-100">
+                      Access coding challenges, algorithms, and practice resources to improve your programming skills
+                    </p>
+                  </div>
+                  <div className="bg-white bg-opacity-20 p-3 rounded-full">
+                    <Terminal className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+              </Link>
+            </div>
           </motion.div>
         )}
 
@@ -143,7 +199,7 @@ export const HomePage = () => {
             <Suspense fallback={
               <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-                <span className="ml-2 text-gray-600">Loading search...</span>
+                <span className="ml-2 text-gray-600">Loading advanced search...</span>
               </div>
             }>
               <EnhancedAISearch initialSearchType="educational" />
@@ -182,6 +238,28 @@ export const HomePage = () => {
             }>
               <EnhancedAISearch initialSearchType="documents" />
             </Suspense>
+          </motion.div>
+        )}
+
+        {activeTab === 'competitive' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="text-center py-12">
+              <Terminal className="h-16 w-16 mx-auto text-indigo-600 mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Competitive Programming Resources</h2>
+              <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+                Access coding challenges, algorithms, and practice resources to enhance your programming skills
+              </p>
+              <Link 
+                to="/competitive-programming"
+                className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                Explore Resources
+              </Link>
+            </div>
           </motion.div>
         )}
       </main>

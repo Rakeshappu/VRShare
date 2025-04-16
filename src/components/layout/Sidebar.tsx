@@ -70,6 +70,7 @@ export const Sidebar = () => {
     <>
       <SidebarLink icon={<FolderOpen />} text="My Files" path="/dashboard" active={isActive('/dashboard')} />
       <SidebarLink icon={<FileText />} text="Study Materials" path="/study-materials" active={isActive('/study-materials')} />
+      <SidebarLink icon={<Code />} text="Competitive Programming" path="/competitive-programming" active={isActive('/competitive-programming')} />
       <SidebarLink icon={<Star />} text="Starred" path="/starred" active={isActive('/starred')} />
       <SidebarLink icon={<Download />} text="Downloads" path="/downloads" active={isActive('/downloads')} />
     </>

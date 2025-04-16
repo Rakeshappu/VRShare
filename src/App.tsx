@@ -121,6 +121,20 @@ function App() {
               }
             />
             <Route
+              path="/competitive-programming"
+              element={
+                <PrivateRoute>
+                  <div className="flex">
+                    <Sidebar />
+                    <div className="flex-1">
+                      <Header />
+                      <CompetitiveProgramming />
+                    </div>
+                  </div>
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/starred"
               element={
                 <PrivateRoute role="student">
@@ -403,22 +417,6 @@ function App() {
               }
             />
 
-            {/* New Competitive Programming page - Admin only */}
-            <Route
-              path="/competitive-programming"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <CompetitiveProgramming />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            
             <Route
               path="/profile"
               element={

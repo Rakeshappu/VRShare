@@ -54,6 +54,8 @@ export interface FacultyResource {
   link?: string;
   fileContent?: string;
   createdAt: string;
+  uploadedBy?: string;
+  tags?: string[];
   stats: {
     views: number;
     likes: number;
@@ -61,8 +63,6 @@ export interface FacultyResource {
     downloads: number;
     lastViewed: string;
   };
-  uploadedBy?: string;
-  tags?: string[];
 }
 
 // ResourceCommentData interface for comments
@@ -125,4 +125,17 @@ export interface SearchResource {
   publishDate?: string;
   author?: string;
   score?: number;
+}
+
+// Competitive Programming Resource
+export interface CompetitiveProgrammingResource {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  platform: string;
+  tags: string[];
+  url: string;
+  addedBy: string;
+  createdAt: string;
 }
