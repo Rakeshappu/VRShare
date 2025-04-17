@@ -17,9 +17,6 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Always add token to request
-      config.headers.Authorization = `Bearer ${token}`;
-      
       const isAdminRoute = config.url?.includes('/admin/');
       const isAuthAdminRoute = config.url?.includes('/auth/admin-check');
       
@@ -33,13 +30,15 @@ api.interceptors.request.use(
           
           if (!payload?.role || payload.role !== 'admin') {
             console.warn('Token missing admin role for admin route:', config.url);
-            // We'll still send the request with the token
+            // We'll still send the request with the token, but log this warning
             // The server will check the database for admin status as a fallback
           }
         } catch (error) {
           console.error('Error processing token for admin request:', error);
         }
       }
+      
+      config.headers.Authorization = `Bearer ${token}`;
     }
     
     // Debug log request

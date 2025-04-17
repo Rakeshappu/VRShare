@@ -32,21 +32,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     // Add user info to request object
     req.user = decoded;
     
-    // If the token doesn't have a role, try to get it from the database
-    if (!decoded.role) {
-      try {
-        const user = await User.findById(decoded.userId).select('role');
-        if (user) {
-          req.user.role = user.role;
-          console.log(`Added missing role ${user.role} to request user from database`);
-        }
-      } catch (dbError) {
-        console.error('Error fetching user role from database:', dbError);
-      }
-    }
-    
     // Log successful authentication with more details
-    console.log(`Authenticated user: ${decoded.userId} with role: ${req.user.role || 'undefined'}`);
+    console.log(`Authenticated user: ${decoded.userId} with role: ${decoded.role || 'undefined'}`);
     
     next();
   } catch (error: any) {
@@ -85,8 +72,8 @@ export const adminMiddleware = async (req: Request, res: Response, next: NextFun
         
         if (user && user.role === 'admin') {
           console.log('Admin access granted from database for user:', req.user.userId);
-          // Update the request user object with the role for downstream middleware
-          req.user.role = 'admin';
+          // Note: We're not updating the token here, but allowing access
+          req.user.role = 'admin'; // Add role to request for downstream middleware
           return next();
         }
       }

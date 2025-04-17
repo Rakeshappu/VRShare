@@ -108,8 +108,8 @@ export const SemesterResources = ({
           <h2 className="text-xl font-semibold">Semester {semester} Resources</h2>
           <div className="animate-pulse h-8 w-32 bg-gray-200 rounded"></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="animate-pulse">
               <div className="h-40 bg-gray-200 rounded-md"></div>
             </div>
@@ -176,13 +176,13 @@ export const SemesterResources = ({
         </div>
       ) : (
         <motion.div 
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
           variants={container}
           initial="hidden"
           animate="show"
         >
           {filteredResources.map((resource) => (
-            <motion.div key={resource.id} variants={item}>
+            <motion.div key={resource._id || resource.id} variants={item}>
               <ResourceCard resource={resource} />
             </motion.div>
           ))}

@@ -1,3 +1,4 @@
+
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
 
@@ -5,11 +6,10 @@ class SocketService {
   private socket: Socket | null = null;
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
   private connectionAttempts = 0;
-  private maxConnectionAttempts = 5;
+  private maxConnectionAttempts = 5; // Increased from 3 to 5
   private reconnectDelay = 2000; // 2 seconds
   private notificationsQueue: any[] = [];
   private connected = false;
-  private toastShown = false;
 
   // Initialize socket connection
   connect(token: string) {
@@ -21,19 +21,26 @@ class SocketService {
     }
 
     // Create socket connection
-    const baseUrl = window.location.hostname;
-    const socketUrl = `http://${baseUrl}:5173`; // Using port 8080 consistently
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? window.location.hostname
+      : window.location.origin;
+    
+    // const port = process.env.NODE_ENV === 'development' ? '8080' : ''; //is it right??
+    const port = process.env.NODE_ENV === 'development' ? '5173' : '';
+    const socketUrl = process.env.NODE_ENV === 'development'
+      ? `http://${baseUrl}:${port}`
+      : baseUrl;
     
     console.log(`Connecting to socket server at: ${socketUrl}`);
     
     try {
       this.socket = io(socketUrl, {
         auth: { token },
-        reconnectionAttempts: 8,
+        reconnectionAttempts: 8,       // Increased from 5 to 8
         reconnectionDelay: 1000,
-        timeout: 30000,
+        timeout: 30000,                // Increased from 20s to 30s
         path: '/socket.io',
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling']  // Explicitly define transports
       });
 
       // Set up default listeners
@@ -41,7 +48,6 @@ class SocketService {
         console.log('Socket connected successfully');
         this.connectionAttempts = 0;
         this.connected = true;
-        this.toastShown = false;
         this.processNotificationQueue();
         
         // Show connection status
@@ -100,18 +106,6 @@ class SocketService {
           resourceId: data.resourceId
         });
       });
-      
-      // Listen for notifications to specific semesters
-      this.socket.on('semester-notification', (data) => {
-        console.log('Semester-specific notification received:', data);
-        if (data && data.message) {
-          this.showNotification({
-            title: data.title || 'New Notification',
-            message: data.message,
-            resourceId: data.resourceId
-          });
-        }
-      });
 
       // Re-add all existing event listeners
       this.listeners.forEach((callbacks, event) => {
@@ -148,7 +142,7 @@ class SocketService {
     
     console.log('Displaying notification:', data);
     
-    // Always show toast notification regardless of browser notification status
+    // Show toast notification - always show toast regardless of browser notification status
     toast.success(data.message, {
       duration: 5000,
       position: 'top-right'
@@ -214,14 +208,9 @@ class SocketService {
       }, this.reconnectDelay * this.connectionAttempts); // Exponential backoff
     } else {
       console.log('Max connection attempts reached. Socket functionality disabled.');
-      // Only show toast message once
-      if (!this.toastShown) {
-        toast.error('Unable to establish real-time connection. Please refresh the page.', {
-          id: 'socket-error',
-          duration: 5000
-        });
-        this.toastShown = true;
-      }
+      toast.error('Unable to establish real-time connection. Please refresh the page.', {
+        duration: 5000
+      });
     }
   }
 

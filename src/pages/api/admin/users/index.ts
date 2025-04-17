@@ -29,11 +29,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('Token decoded for user management:', decoded);
       
       // Ensure the user is an admin (check token first, then database)
-      let isAdmin = decoded.role === 'admin';
-      
-      if (!isAdmin) {
+      if (decoded.role !== 'admin') {
         console.log('Role not found in token, checking database...');
-        isAdmin = await checkAdminInDatabase(decoded.userId);
+        const isAdmin = await checkAdminInDatabase(decoded.userId);
         
         if (!isAdmin) {
           return res.status(403).json({ error: 'Not authorized' });
@@ -83,10 +81,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role?: string };
       
       // Ensure the user is an admin (check token first, then database)
-      let isAdmin = decoded.role === 'admin';
-      
-      if (!isAdmin) {
-        isAdmin = await checkAdminInDatabase(decoded.userId);
+      if (decoded.role !== 'admin') {
+        const isAdmin = await checkAdminInDatabase(decoded.userId);
         if (!isAdmin) {
           return res.status(403).json({ error: 'Not authorized' });
         }

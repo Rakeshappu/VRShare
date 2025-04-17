@@ -91,10 +91,8 @@ export const withDB = (handler: Handler) => async (req: NextApiRequest, res: Nex
       const isAdminInDB = await checkAdminInDatabase(decoded.userId);
       if (isAdminInDB) {
         console.log('Admin access verified from database (token role missing)');
-        // Enhance the decoded token with the role information
+        // Enhance the request by adding the role that was missing in the token
         (decoded as any).role = 'admin';
-        // Add the updated user info to the request
-        (req as any).user = decoded;
         return handler(req, res);
       }
       

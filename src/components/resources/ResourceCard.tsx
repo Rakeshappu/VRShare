@@ -120,7 +120,7 @@ export const ResourceCard = ({ resource }: ResourceCardProps) => {
     setIsDownloading(true);
     
     try {
-      // First count as a view - we want to track both view and download
+      // Update download stats
       if (resource._id || resource.id) {
         await updateStats(resource._id || resource.id, 'view');
         await updateStats(resource._id || resource.id, 'download');
