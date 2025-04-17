@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { BarChart2, Users, BookOpen, Download, Globe, X } from 'lucide-react';
 import { SearchBar } from '../search/SearchBar';
@@ -27,7 +26,6 @@ export const Dashboard = () => {
     downloads: 0
   });
 
-  // Check MongoDB connection on mount
   useEffect(() => {
     const checkConnection = async () => {
       try {
@@ -42,55 +40,60 @@ export const Dashboard = () => {
     checkConnection();
   }, []);
   
-  // Fetch resources from MongoDB
   useEffect(() => {
     const fetchResources = async () => {
       try {
         setLoading(true);
+        console.log('Fetching resources for user:', currentUser);
+        
         if (currentUser?.semester) {
-          console.log('Fetching resources for semester:', currentUser.semester);
-          const fetchedResources = await getResources({ semester: currentUser.semester });
-          console.log('Fetched resources:', fetchedResources);
+          const cachedResources = localStorage.getItem(`resources-${currentUser.semester}`);
+          const cachedTimestamp = localStorage.getItem(`resources-timestamp-${currentUser.semester}`);
           
-          if (Array.isArray(fetchedResources)) {
-            setResources(fetchedResources);
+          const isCacheFresh = cachedTimestamp && (Date.now() - parseInt(cachedTimestamp) < 300000);
+          
+          if (cachedResources && isCacheFresh) {
+            console.log('Using cached resources');
+            setResources(JSON.parse(cachedResources));
+            calculateStats(JSON.parse(cachedResources));
+          } else {
+            console.log('Fetching fresh resources');
+            const fetchedResources = await getResources({ semester: currentUser.semester });
             
-            // Calculate stats
-            const totalResources = fetchedResources.length;
-            const totalViews = fetchedResources.reduce((total: number, resource: any) => 
-              total + (resource.stats?.views || 0), 0);
-            const downloads = fetchedResources.reduce((total: number, resource: any) => 
-              total + (resource.stats?.downloads || 0), 0);
-            
-            // Get accurate active user count
-            const userActivities = await activityService.getRecentActivities(30);
-            const uniqueUserIds = new Set();
-            
-            if (Array.isArray(userActivities)) {
-              userActivities.forEach((activity: Activity) => {
-                if (activity.userId) {
-                  uniqueUserIds.add(activity.userId);
-                }
-              });
+            if (Array.isArray(fetchedResources)) {
+              localStorage.setItem(`resources-${currentUser.semester}`, JSON.stringify(fetchedResources));
+              localStorage.setItem(`resources-timestamp-${currentUser.semester}`, Date.now().toString());
+              
+              setResources(fetchedResources);
+              calculateStats(fetchedResources);
+            } else {
+              console.error('Invalid resources format:', fetchedResources);
+              setError('Received invalid data format from server');
             }
-            
-            setStats({
-              totalResources,
-              totalViews,
-              activeUsers: uniqueUserIds.size || Math.min(totalResources * 2, 15),
-              downloads
-            });
           }
         }
-        setError(null);
       } catch (err) {
         console.error('Failed to fetch resources:', err);
         setError('Failed to load resources. Please try again later.');
-        // Use empty array as fallback
         setResources([]);
       } finally {
         setLoading(false);
       }
+    };
+
+    const calculateStats = (resources: any[]) => {
+      const totalResources = resources.length;
+      const totalViews = resources.reduce((total, resource) => 
+        total + (resource.stats?.views || 0), 0);
+      const downloads = resources.reduce((total, resource) => 
+        total + (resource.stats?.downloads || 0), 0);
+      
+      setStats({
+        totalResources,
+        totalViews,
+        activeUsers: Math.min(totalResources * 2, 15),
+        downloads
+      });
     };
     
     if (currentUser) {
@@ -98,7 +101,6 @@ export const Dashboard = () => {
     }
   }, [currentUser]);
 
-  // Fetch activities
   useEffect(() => {
     const fetchActivities = async () => {
       try {
@@ -113,7 +115,6 @@ export const Dashboard = () => {
     fetchActivities();
   }, []);
   
-  // Listen for global search events
   useEffect(() => {
     const handleGlobalSearch = (event: any) => {
       setWebSearchResults(event.detail);

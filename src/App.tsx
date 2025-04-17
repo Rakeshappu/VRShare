@@ -27,6 +27,7 @@ import { TrashPage as FacultyTrashPage } from './pages/faculty/TrashPage';
 import { SettingsPage as FacultySettingsPage } from './pages/faculty/SettingsPage';
 
 import { UploadWorkflow } from './components/faculty/UploadWorkflow';
+import StudentCompetitiveProgramming from './pages/study/StudentCompetitiveProgramming';
 
 function App() {
   const skipAuth = true;
@@ -399,6 +400,21 @@ function App() {
                     <div className="flex-1">
                       <Header />
                       <ProfilePage />
+                    </div>
+                  </div>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/competitive-programming"
+              element={
+                <PrivateRoute role="student">
+                  <div className="flex">
+                    <Sidebar />
+                    <div className="flex-1">
+                      <Header />
+                      <StudentCompetitiveProgramming />
                     </div>
                   </div>
                 </PrivateRoute>
