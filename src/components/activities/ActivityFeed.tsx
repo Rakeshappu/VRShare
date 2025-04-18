@@ -1,8 +1,8 @@
-
 import { useEffect, useState } from 'react';
 import { Activity } from '../../types';
 import { Clock, Award, Download, Eye, Upload, MessageSquare, Share2 } from 'lucide-react';
 import { activityService } from '../../services/activity.service';
+import { useAuth } from '../../hooks/auth';
 
 const getActivityIcon = (type: Activity['type']) => {
   switch (type) {
@@ -31,6 +31,7 @@ export const ActivityFeed = ({ activities: propActivities }: ActivityFeedProps) 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (propActivities) {
@@ -43,9 +44,10 @@ export const ActivityFeed = ({ activities: propActivities }: ActivityFeedProps) 
       try {
         setIsLoading(true);
         setError(null);
-        const fetchedActivities = await activityService.getRecentActivities(10);
         
-        // Make sure we always have an array, even if the API returns something else
+        // Fetch activities specific to the user's semester
+        const fetchedActivities = await activityService.getRecentActivities(10, user?.semester);
+        
         if (Array.isArray(fetchedActivities)) {
           setActivities(fetchedActivities);
         } else {
@@ -62,7 +64,7 @@ export const ActivityFeed = ({ activities: propActivities }: ActivityFeedProps) 
     };
 
     fetchActivities();
-  }, [propActivities]);
+  }, [propActivities, user]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">

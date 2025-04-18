@@ -12,18 +12,42 @@ export const activityService = {
       return response.data;
     } catch (error) {
       console.error('Failed to log activity:', error);
-      // Don't throw error to prevent disrupting user experience
       return null;
     }
   },
 
-  async getRecentActivities(limit = 10) {
+  async getRecentActivities(limit = 10, semester?: number) {
     try {
-      const response = await api.get(`/api/user/activity?limit=${limit}`);
+      const params = new URLSearchParams();
+      params.append('limit', limit.toString());
+      if (semester) params.append('semester', semester.toString());
+      
+      const response = await api.get(`/api/user/activity?${params.toString()}`);
       return response.data.activities;
     } catch (error) {
       console.error('Failed to fetch activities:', error);
       return [];
     }
+  },
+
+  async getUserDailyStreak() {
+    try {
+      const response = await api.get('/api/user/activity/stats');
+      return response.data.streak || 0;
+    } catch (error) {
+      console.error('Failed to fetch user streak:', error);
+      return 0;
+    }
+  },
+
+  async getTodayActivities() {
+    try {
+      const response = await api.get('/api/user/activity/stats?period=today');
+      return response.data.count || 0;
+    } catch (error) {
+      console.error('Failed to fetch today activities:', error);
+      return 0;
+    }
   }
 };
+
