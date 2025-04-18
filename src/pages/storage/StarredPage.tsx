@@ -42,74 +42,6 @@ export const StarredPage = () => {
         throw new Error('Not authenticated');
       }
 
-      // Simulating API response for demo purposes
-      setTimeout(() => {
-        const mockData = [
-          {
-            _id: '1',
-            title: 'Data Structures Notes',
-            description: 'Comprehensive notes on arrays, linked lists, trees, and graphs',
-            type: 'document',
-            fileUrl: 'https://example.com/file1.pdf',
-            fileName: 'data-structures.pdf',
-            subject: 'Data Structures',
-            createdAt: '2023-10-15T10:30:00Z',
-            viewCount: 243,
-            uploadedBy: {
-              name: 'Prof. Smith',
-              id: 'faculty1'
-            }
-          },
-          {
-            _id: '2',
-            title: 'Introduction to Neural Networks',
-            description: 'Learn the fundamentals of neural networks and deep learning',
-            type: 'video',
-            link: 'https://www.youtube.com/watch?v=example',
-            subject: 'Machine Learning',
-            createdAt: '2023-10-10T14:20:00Z',
-            viewCount: 187,
-            uploadedBy: {
-              name: 'Dr. Johnson',
-              id: 'faculty2'
-            }
-          },
-          {
-            _id: '3',
-            title: 'Advanced Database Systems',
-            description: 'Materials on distributed databases, query optimization, and transaction processing',
-            type: 'document',
-            fileUrl: 'https://example.com/file2.pdf',
-            fileName: 'advanced-db.pdf',
-            subject: 'Database Management',
-            createdAt: '2023-09-28T09:15:00Z',
-            viewCount: 156,
-            uploadedBy: {
-              name: 'Prof. Williams',
-              id: 'faculty3'
-            }
-          },
-          {
-            _id: '4',
-            title: 'Cloud Computing Resources',
-            description: 'Learning resources for AWS, Azure, and Google Cloud Platform',
-            type: 'link',
-            link: 'https://cloud-resources.edu',
-            subject: 'Cloud Computing',
-            createdAt: '2023-09-20T11:45:00Z',
-            viewCount: 98,
-            uploadedBy: {
-              name: 'Dr. Brown',
-              id: 'faculty4'
-            }
-          }
-        ];
-        setStarredItems(mockData);
-        setLoading(false);
-      }, 1000);
-      
-      // Uncomment below code for real API integration
-      /*
       const response = await fetch('/api/resources/bookmarks', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -122,10 +54,14 @@ export const StarredPage = () => {
 
       const data = await response.json();
       setStarredItems(data.resources || []);
-      */
     } catch (error) {
       console.error('Error fetching bookmarked resources:', error);
       toast.error('Failed to load bookmarked resources');
+      // Try to load from localStorage if API fails
+      const cachedResources = localStorage.getItem('bookmarkedResources');
+      if (cachedResources) {
+        setStarredItems(JSON.parse(cachedResources));
+      }
     } finally {
       setLoading(false);
     }
@@ -138,13 +74,6 @@ export const StarredPage = () => {
         throw new Error('Not authenticated');
       }
 
-      // In a real app, make API call here
-      // For demo purposes, just update local state
-      setStarredItems(starredItems.filter(item => item._id !== id));
-      toast.success('Removed from bookmarks');
-      
-      // Uncomment below code for real API integration
-      /*
       const response = await fetch(`/api/resources/${id}/bookmark`, {
         method: 'POST',
         headers: {
@@ -160,7 +89,11 @@ export const StarredPage = () => {
       // Update local state
       setStarredItems(starredItems.filter(item => item._id !== id));
       toast.success('Removed from bookmarks');
-      */
+      
+      // Update localStorage cache
+      localStorage.setItem('bookmarkedResources', JSON.stringify(
+        starredItems.filter(item => item._id !== id)
+      ));
     } catch (error) {
       console.error('Error removing bookmark:', error);
       toast.error('Failed to remove bookmark');
@@ -169,11 +102,22 @@ export const StarredPage = () => {
 
   const incrementViewCount = async (id: string) => {
     try {
-      // In a real app, this would be an API call to update view count
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      await fetch(`/api/resources/${id}/view`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Update local view count
       setStarredItems(
         starredItems.map(item => 
           item._id === id 
-            ? { ...item, viewCount: item.viewCount + 1 } 
+            ? { ...item, viewCount: (item.viewCount || 0) + 1 } 
             : item
         )
       );
@@ -268,7 +212,7 @@ export const StarredPage = () => {
                 
                 <div className="flex items-center text-xs text-gray-500 mb-2">
                   <Eye className="h-3.5 w-3.5 mr-1" />
-                  <span>{item.viewCount} views</span>
+                  <span>{item.viewCount || 0} views</span>
                 </div>
                 
                 <div className="flex items-center text-xs text-gray-500 mb-2">

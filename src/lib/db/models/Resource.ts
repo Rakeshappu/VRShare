@@ -1,6 +1,59 @@
+
 //src\lib\db\models\Resource.ts
 import mongoose from 'mongoose';
 import { getAllCategoryIds, getStandardizedCategory } from '../../../utils/placementCategoryUtils';
+
+// Define a daily view schema for statistics
+const DailyViewSchema = new mongoose.Schema({
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  count: {
+    type: Number,
+    default: 0
+  }
+});
+
+// Define student feedback schema
+const StudentFeedbackSchema = new mongoose.Schema({
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5
+  },
+  count: {
+    type: Number,
+    default: 0
+  }
+});
+
+// Define stats schema
+const StatsSchema = new mongoose.Schema({
+  views: {
+    type: Number,
+    default: 0
+  },
+  downloads: {
+    type: Number,
+    default: 0
+  },
+  likes: {
+    type: Number,
+    default: 0
+  },
+  comments: {
+    type: Number,
+    default: 0
+  },
+  lastViewed: {
+    type: Date,
+    default: Date.now
+  },
+  dailyViews: [DailyViewSchema],
+  studentFeedback: [StudentFeedbackSchema]
+});
 
 // Define the Resource schema
 const ResourceSchema = new mongoose.Schema({
@@ -56,39 +109,8 @@ const ResourceSchema = new mongoose.Schema({
     default: null
   },
   stats: {
-    views: {
-      type: Number,
-      default: 0
-    },
-    downloads: {
-      type: Number,
-      default: 0
-    },
-    likes: {
-      type: Number,
-      default: 0
-    },
-    comments: {
-      type: Number,
-      default: 0
-    },
-    lastViewed: {
-      type: Date,
-      default: Date.now
-    },
-    dailyViews: [{
-      date: {
-        type: Date
-      },
-      count: {
-        type: Number,
-        default: 0
-      }
-    }],
-    studentFeedback: [{
-      rating: Number,
-      count: Number
-    }]
+    type: StatsSchema,
+    default: () => ({})
   },
   category: {
     type: String,
@@ -159,7 +181,11 @@ ResourceSchema.pre('save', function(next) {
       likes: 0,
       comments: 0,
       lastViewed: new Date(),
-      dailyViews: [{}],
+      dailyViews: [{
+        date: new Date(),
+        count: 0
+      }],
+      studentFeedback: []
     };
   }
   
@@ -187,11 +213,23 @@ ResourceSchema.methods.restore = async function() {
 
 // Update find operations to exclude soft-deleted items by default
 ResourceSchema.pre('find', function() {
-  this.where({ deletedAt: null });
+  // @ts-ignore - this condition is valid for mongoose queries
+  if (!this.getQuery().includeSoftDeleted) {
+    this.where({ deletedAt: null });
+  } else {
+    // @ts-ignore - this is a custom property we're using
+    delete this.getQuery().includeSoftDeleted;
+  }
 });
 
 ResourceSchema.pre('findOne', function() {
-  this.where({ deletedAt: null });
+  // @ts-ignore - this condition is valid for mongoose queries
+  if (!this.getQuery().includeSoftDeleted) {
+    this.where({ deletedAt: null });
+  } else {
+    // @ts-ignore - this is a custom property we're using
+    delete this.getQuery().includeSoftDeleted;
+  }
 });
 
 // Define a virtual for a user-friendly ID
@@ -221,11 +259,3 @@ try {
 }
 
 export { Resource };
-
-export function find(query: any) {
-  throw new Error('Function not implemented.');
-}
-
-export function countDocuments(query: any) {
-  throw new Error('Function not implemented.');
-}
