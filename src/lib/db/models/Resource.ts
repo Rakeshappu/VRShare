@@ -129,6 +129,10 @@ const ResourceSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 });
 
@@ -167,6 +171,29 @@ ResourceSchema.pre('save', function(next) {
   next();
 });
 
+// Add method for soft deletion
+ResourceSchema.methods.softDelete = async function() {
+  this.deletedAt = new Date();
+  await this.save();
+  return this;
+};
+
+// Add method for restoration
+ResourceSchema.methods.restore = async function() {
+  this.deletedAt = null;
+  await this.save();
+  return this;
+};
+
+// Update find operations to exclude soft-deleted items by default
+ResourceSchema.pre('find', function() {
+  this.where({ deletedAt: null });
+});
+
+ResourceSchema.pre('findOne', function() {
+  this.where({ deletedAt: null });
+});
+
 // Define a virtual for a user-friendly ID
 ResourceSchema.virtual('id').get(function() {
   return this._id.toString();
@@ -195,10 +222,10 @@ try {
 
 export { Resource };
 
-  export function find(query: any) {
-    throw new Error('Function not implemented.');
-  }
+export function find(query: any) {
+  throw new Error('Function not implemented.');
+}
 
-  export function countDocuments(query: any) {
-    throw new Error('Function not implemented.');
-  }
+export function countDocuments(query: any) {
+  throw new Error('Function not implemented.');
+}

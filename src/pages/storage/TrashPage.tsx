@@ -1,16 +1,16 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Trash, FileText, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { format, addDays, parseISO } from 'date-fns';
 
 interface TrashedItem {
   id: string;
   name: string;
   type: string;
   size: string;
-  date: string;
-  deleteDate: string;
+  deletedAt: string;
+  originalPath: string;
   resourceId?: string;
 }
 
@@ -29,77 +29,53 @@ export const TrashPage = () => {
       setIsLoading(true);
       setError(null);
       
-      // In a real application, this would be an API call
-      // Simulate API call with timeout
-      setTimeout(() => {
-        // This is mock data - in a real app, you'd fetch from your backend
-        const mockTrashedItems = [
-          { 
-            id: '1', 
-            name: 'Old Lecture Notes.pdf', 
-            type: 'PDF', 
-            size: '1.5 MB', 
-            date: '2023-10-10', 
-            deleteDate: '2023-11-10',
-            resourceId: 'res1'
-          },
-          { 
-            id: '2', 
-            name: 'Draft Assignment.docx', 
-            type: 'Word', 
-            size: '0.9 MB', 
-            date: '2023-10-05', 
-            deleteDate: '2023-11-05',
-            resourceId: 'res2'
-          },
-          { 
-            id: '3', 
-            name: 'Backup Files.zip', 
-            type: 'Archive', 
-            size: '7.2 MB', 
-            date: '2023-09-30', 
-            deleteDate: '2023-10-30',
-            resourceId: 'res3'
-          },
-          { 
-            id: '4', 
-            name: 'Presentation Draft.pptx', 
-            type: 'PowerPoint', 
-            size: '4.3 MB', 
-            date: '2023-09-25', 
-            deleteDate: '2023-10-25',
-            resourceId: 'res4'
-          },
-        ];
-        
-        setTrashedItems(mockTrashedItems);
-        setIsLoading(false);
-      }, 800);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch('/api/resources/trash', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch trashed items');
+      }
+
+      const data = await response.json();
+      setTrashedItems(data.items);
     } catch (error) {
       console.error('Error fetching trashed items:', error);
       setError('Failed to fetch trashed items');
-      setIsLoading(false);
       setTrashedItems([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const restoreItem = async (id: string) => {
     try {
-      // In a real app, this would be an API call to restore the item
-      // For now, we'll just simulate it with a state update
-      toast.promise(
-        new Promise((resolve) => {
-          setTimeout(() => {
-            setTrashedItems(trashedItems.filter(item => item.id !== id));
-            resolve('success');
-          }, 500);
-        }),
-        {
-          loading: 'Restoring item...',
-          success: 'Item restored successfully',
-          error: 'Failed to restore item'
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/resources/trash/${id}/restore`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to restore item');
+      }
+
+      await fetchTrashedItems(); // Refresh the list
+      toast.success('Item restored successfully');
     } catch (error) {
       console.error('Error restoring item:', error);
       toast.error('Failed to restore item');
@@ -108,45 +84,27 @@ export const TrashPage = () => {
 
   const deleteItemPermanently = async (id: string) => {
     try {
-      // In a real app, this would be an API call to permanently delete the item
-      toast.promise(
-        new Promise((resolve) => {
-          setTimeout(() => {
-            setTrashedItems(trashedItems.filter(item => item.id !== id));
-            resolve('success');
-          }, 500);
-        }),
-        {
-          loading: 'Deleting item permanently...',
-          success: 'Item permanently deleted',
-          error: 'Failed to delete item'
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/resources/trash/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      );
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete item permanently');
+      }
+
+      await fetchTrashedItems(); // Refresh the list
+      toast.success('Item permanently deleted');
     } catch (error) {
       console.error('Error deleting item permanently:', error);
       toast.error('Failed to delete item permanently');
-    }
-  };
-
-  const emptyTrash = async () => {
-    try {
-      // In a real app, this would be an API call to empty the trash
-      toast.promise(
-        new Promise((resolve) => {
-          setTimeout(() => {
-            setTrashedItems([]);
-            resolve('success');
-          }, 800);
-        }),
-        {
-          loading: 'Emptying trash...',
-          success: 'Trash emptied successfully',
-          error: 'Failed to empty trash'
-        }
-      );
-    } catch (error) {
-      console.error('Error emptying trash:', error);
-      toast.error('Failed to empty trash');
     }
   };
 
@@ -157,13 +115,6 @@ export const TrashPage = () => {
           <Trash className="mr-2 text-red-500" size={24} />
           Trash
         </h1>
-        <button 
-          onClick={emptyTrash}
-          disabled={trashedItems.length === 0 || isLoading}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Empty Trash
-        </button>
       </div>
 
       {isLoading ? (
@@ -180,8 +131,8 @@ export const TrashPage = () => {
       ) : trashedItems.length === 0 ? (
         <div className="text-center py-10">
           <Trash className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">Trash is empty</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Trash is empty</h3>
+          <p className="mt-1 text-sm text-gray-500">
             There are no items in your trash.
           </p>
         </div>
@@ -194,16 +145,18 @@ export const TrashPage = () => {
                   <div className="flex items-center">
                     <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3" />
                     <div>
-                      <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 truncate">{item.name}</p>
+                      <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 truncate">
+                        {item.name}
+                      </p>
                       <p className="flex items-center text-xs text-gray-500 dark:text-gray-400">
                         <span>{item.type}</span>
                         <span className="mx-1">•</span>
                         <span>{item.size}</span>
                         <span className="mx-1">•</span>
-                        <span>Deleted on {item.date}</span>
+                        <span>Deleted on {format(parseISO(item.deletedAt), 'MMM dd, yyyy')}</span>
                       </p>
                       <p className="text-xs text-red-500">
-                        Will be deleted permanently on {item.deleteDate}
+                        Will be deleted permanently on {format(addDays(parseISO(item.deletedAt), 30), 'MMM dd, yyyy')}
                       </p>
                     </div>
                   </div>
