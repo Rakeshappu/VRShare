@@ -1,12 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Eye, Bookmark } from 'lucide-react';
+import { FileText, Download, Eye, Bookmark, Calendar, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DocumentViewer } from '../../components/document/DocumentViewer';
 import { useAuth } from '../../contexts/AuthContext';
 
+interface StarredResource {
+  _id: string;
+  title: string;
+  description: string;
+  type: 'document' | 'video' | 'link';
+  fileUrl?: string;
+  link?: string;
+  fileName?: string;
+  subject: string;
+  uploadDate?: string;
+  createdAt: string;
+  viewCount: number;
+  uploadedBy?: {
+    name: string;
+    id: string;
+  };
+}
+
 export const StarredPage = () => {
-  const [starredItems, setStarredItems] = useState<any[]>([]);
+  const [starredItems, setStarredItems] = useState<StarredResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDocViewer, setShowDocViewer] = useState(false);
   const [currentDocument, setCurrentDocument] = useState<{url: string, name: string}>({url: '', name: ''});
@@ -24,6 +42,74 @@ export const StarredPage = () => {
         throw new Error('Not authenticated');
       }
 
+      // Simulating API response for demo purposes
+      setTimeout(() => {
+        const mockData = [
+          {
+            _id: '1',
+            title: 'Data Structures Notes',
+            description: 'Comprehensive notes on arrays, linked lists, trees, and graphs',
+            type: 'document',
+            fileUrl: 'https://example.com/file1.pdf',
+            fileName: 'data-structures.pdf',
+            subject: 'Data Structures',
+            createdAt: '2023-10-15T10:30:00Z',
+            viewCount: 243,
+            uploadedBy: {
+              name: 'Prof. Smith',
+              id: 'faculty1'
+            }
+          },
+          {
+            _id: '2',
+            title: 'Introduction to Neural Networks',
+            description: 'Learn the fundamentals of neural networks and deep learning',
+            type: 'video',
+            link: 'https://www.youtube.com/watch?v=example',
+            subject: 'Machine Learning',
+            createdAt: '2023-10-10T14:20:00Z',
+            viewCount: 187,
+            uploadedBy: {
+              name: 'Dr. Johnson',
+              id: 'faculty2'
+            }
+          },
+          {
+            _id: '3',
+            title: 'Advanced Database Systems',
+            description: 'Materials on distributed databases, query optimization, and transaction processing',
+            type: 'document',
+            fileUrl: 'https://example.com/file2.pdf',
+            fileName: 'advanced-db.pdf',
+            subject: 'Database Management',
+            createdAt: '2023-09-28T09:15:00Z',
+            viewCount: 156,
+            uploadedBy: {
+              name: 'Prof. Williams',
+              id: 'faculty3'
+            }
+          },
+          {
+            _id: '4',
+            title: 'Cloud Computing Resources',
+            description: 'Learning resources for AWS, Azure, and Google Cloud Platform',
+            type: 'link',
+            link: 'https://cloud-resources.edu',
+            subject: 'Cloud Computing',
+            createdAt: '2023-09-20T11:45:00Z',
+            viewCount: 98,
+            uploadedBy: {
+              name: 'Dr. Brown',
+              id: 'faculty4'
+            }
+          }
+        ];
+        setStarredItems(mockData);
+        setLoading(false);
+      }, 1000);
+      
+      // Uncomment below code for real API integration
+      /*
       const response = await fetch('/api/resources/bookmarks', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -36,6 +122,7 @@ export const StarredPage = () => {
 
       const data = await response.json();
       setStarredItems(data.resources || []);
+      */
     } catch (error) {
       console.error('Error fetching bookmarked resources:', error);
       toast.error('Failed to load bookmarked resources');
@@ -51,6 +138,13 @@ export const StarredPage = () => {
         throw new Error('Not authenticated');
       }
 
+      // In a real app, make API call here
+      // For demo purposes, just update local state
+      setStarredItems(starredItems.filter(item => item._id !== id));
+      toast.success('Removed from bookmarks');
+      
+      // Uncomment below code for real API integration
+      /*
       const response = await fetch(`/api/resources/${id}/bookmark`, {
         method: 'POST',
         headers: {
@@ -66,13 +160,29 @@ export const StarredPage = () => {
       // Update local state
       setStarredItems(starredItems.filter(item => item._id !== id));
       toast.success('Removed from bookmarks');
+      */
     } catch (error) {
       console.error('Error removing bookmark:', error);
       toast.error('Failed to remove bookmark');
     }
   };
 
-  const handleDownload = (item: any) => {
+  const incrementViewCount = async (id: string) => {
+    try {
+      // In a real app, this would be an API call to update view count
+      setStarredItems(
+        starredItems.map(item => 
+          item._id === id 
+            ? { ...item, viewCount: item.viewCount + 1 } 
+            : item
+        )
+      );
+    } catch (error) {
+      console.error('Error updating view count:', error);
+    }
+  };
+
+  const handleDownload = (item: StarredResource) => {
     if (item.fileUrl) {
       // Direct download
       const a = document.createElement('a');
@@ -89,7 +199,9 @@ export const StarredPage = () => {
     }
   };
 
-  const handleView = (item: any) => {
+  const handleView = (item: StarredResource) => {
+    incrementViewCount(item._id);
+    
     if (item.fileUrl) {
       setCurrentDocument({
         url: item.fileUrl,
@@ -101,6 +213,15 @@ export const StarredPage = () => {
     } else {
       toast.error('No content available to view');
     }
+  };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   return (
@@ -144,12 +265,26 @@ export const StarredPage = () => {
                 </div>
                 
                 <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">{item.description}</p>
+                
+                <div className="flex items-center text-xs text-gray-500 mb-2">
+                  <Eye className="h-3.5 w-3.5 mr-1" />
+                  <span>{item.viewCount} views</span>
+                </div>
+                
+                <div className="flex items-center text-xs text-gray-500 mb-2">
+                  <Calendar className="h-3.5 w-3.5 mr-1" />
+                  <span>{formatDate(item.createdAt)}</span>
+                </div>
+                
+                {item.uploadedBy && (
+                  <div className="flex items-center text-xs text-gray-500">
+                    <User className="h-3.5 w-3.5 mr-1" />
+                    <span>Uploaded by {item.uploadedBy.name}</span>
+                  </div>
+                )}
               </div>
               
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 flex justify-between items-center">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {new Date(item.createdAt || item.uploadDate).toLocaleDateString()}
-                </span>
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 flex justify-end items-center">
                 <div className="flex space-x-2">
                   <button 
                     onClick={() => handleView(item)}

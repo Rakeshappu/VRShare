@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RoleSelection } from './components/RoleSelection';
@@ -14,7 +15,14 @@ export const AuthPage = () => {
   }
 
   if (user) {
-    return <Navigate to={user.role === 'faculty' ? '/faculty/dashboard' : '/dashboard'} />;
+    // Redirect based on role
+    if (user.role === 'admin') {
+      return <Navigate to="/admin/dashboard" />;
+    } else if (user.role === 'faculty') {
+      return <Navigate to="/faculty/dashboard" />;
+    } else {
+      return <Navigate to="/dashboard" />;
+    }
   }
 
   return (
