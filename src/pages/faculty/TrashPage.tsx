@@ -42,10 +42,11 @@ export const TrashPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch trashed items');
+        throw new Error(`Failed to fetch trashed items: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Trashed items fetched:', data);
       setTrashedItems(data.items || []);
     } catch (error) {
       console.error('Error fetching trashed items:', error);

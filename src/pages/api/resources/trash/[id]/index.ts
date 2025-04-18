@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Permanently delete the resource
-    await resource.deleteOne();
+    await Resource.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
 
     return res.status(200).json({ success: true, message: 'Resource permanently deleted' });
   } catch (error) {

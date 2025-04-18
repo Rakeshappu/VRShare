@@ -75,30 +75,58 @@ export const AdminDashboard = () => {
       try {
         setIsLoading(true);
         
-        // Fetch users count by role
-        const usersResponse = await api.get('/api/user/stats');
-        
+        // Use fetch directly instead of axios to avoid issues
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
         // Fetch resources stats
-        const resourcesResponse = await api.get('/api/resources/stats');
+        const resourcesStatsResponse = await fetch('/api/resources/stats', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!resourcesStatsResponse.ok) {
+          throw new Error(`Resource stats fetch failed with status: ${resourcesStatsResponse.status}`);
+        }
+        
+        const resourcesStatsData = await resourcesStatsResponse.json();
+        
+        // Fetch users count by role
+        const usersResponse = await fetch('/api/user/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        let usersData = { totalUsers: 0, departmentDistribution: [] };
+        if (usersResponse.ok) {
+          usersData = await usersResponse.json();
+        }
         
         // Fetch activity stats
-        const activityResponse = await api.get('/api/user/activity/stats');
+        const activityResponse = await fetch('/api/user/activity/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        let activityData = { totalActivities: 0, dailyActivity: [] };
+        if (activityResponse.ok) {
+          activityData = await activityResponse.json();
+        }
         
         // Calculate today's uploads and downloads
         const today = new Date().toISOString().split('T')[0];
-        
         let todayUploads = 0;
         let todayDownloads = 0;
         
-        if (resourcesResponse.data?.dailyStats) {
-          const todayStat = resourcesResponse.data.dailyStats.find((stat: any) => 
-            new Date(stat.date).toISOString().split('T')[0] === today
-          );
-          
-          if (todayStat) {
-            todayUploads = todayStat.uploads || 0;
-            todayDownloads = todayStat.downloads || 0;
-          }
+        if (resourcesStatsData?.todayStats) {
+          todayUploads = resourcesStatsData.todayStats.uploads || 0;
+          todayDownloads = resourcesStatsData.todayStats.downloads || 0;
         }
         
         setTodayStats({
@@ -109,27 +137,27 @@ export const AdminDashboard = () => {
         // Update analytics state with real data
         setAnalytics({
           users: { 
-            total: usersResponse.data?.totalUsers || 0, 
+            total: usersData?.totalUsers || 0, 
             loading: false 
           },
           resources: { 
-            total: resourcesResponse.data?.totalResources || 0, 
+            total: resourcesStatsData?.totalResources || 0, 
             loading: false 
           },
           activity: { 
-            total: activityResponse.data?.totalActivities || 0, 
+            total: activityData?.totalActivities || 0, 
             loading: false 
           },
           departments: {
-            data: usersResponse.data?.departmentDistribution || generateMockDepartmentData(),
+            data: usersData?.departmentDistribution || [],
             loading: false
           },
           resourceTypes: {
-            data: resourcesResponse.data?.typeDistribution || generateMockResourceTypeData(),
+            data: resourcesStatsData?.typeDistribution || [],
             loading: false
           },
           dailyActivity: {
-            data: activityResponse.data?.dailyActivity || generateMockDailyActivityData(),
+            data: resourcesStatsData?.dailyActivity || [],
             loading: false
           }
         });
@@ -137,20 +165,19 @@ export const AdminDashboard = () => {
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching analytics:', error);
-        
-        // Fallback to mock data
+        // Don't use mock data, instead show empty states
         setAnalytics({
-          users: { total: resources.length > 0 ? Math.floor(resources.length * 1.5) : 120, loading: false },
+          users: { total: 0, loading: false },
           resources: { total: resources.length, loading: false },
-          activity: { total: resources.length > 0 ? resources.length * 3 : 378, loading: false },
-          departments: { data: generateMockDepartmentData(), loading: false },
-          resourceTypes: { data: generateMockResourceTypeData(), loading: false },
-          dailyActivity: { data: generateMockDailyActivityData(), loading: false }
+          activity: { total: 0, loading: false },
+          departments: { data: [], loading: false },
+          resourceTypes: { data: [], loading: false },
+          dailyActivity: { data: [], loading: false }
         });
         
         setTodayStats({
-          uploads: Math.floor(Math.random() * 10) + 5,
-          downloads: Math.floor(Math.random() * 30) + 15
+          uploads: 0,
+          downloads: 0
         });
         
         setIsLoading(false);
@@ -182,6 +209,7 @@ export const AdminDashboard = () => {
             type: res.type,
             subject: res.subject,
             semester: res.semester,
+            createdAt: res.createdAt,
             uploadDate: res.createdAt,
             fileName: res.fileName,
             fileUrl: res.fileUrl,
@@ -206,53 +234,6 @@ export const AdminDashboard = () => {
     
     fetchResources();
   }, []);
-
-  // Mock data generators (fallback if API fails)
-  const generateMockDepartmentData = () => {
-    return [
-      { name: 'Computer Science', value: 450 },
-      { name: 'Electronics', value: 320 },
-      { name: 'Mechanical', value: 280 },
-      { name: 'Civil', value: 190 },
-      { name: 'Other', value: 150 }
-    ];
-  };
-
-  const generateMockResourceTypeData = () => {
-    return [
-      { name: 'Document', value: 65 },
-      { name: 'Video', value: 15 },
-      { name: 'Link', value: 12 },
-      { name: 'Note', value: 8 }
-    ];
-  };
-
-  const generateMockDailyActivityData = () => {
-    const data = [];
-    const today = new Date();
-    
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      
-      data.push({
-        name: date.toLocaleDateString('en-US', { weekday: 'short' }),
-        uploads: Math.floor(Math.random() * 20) + 5,
-        downloads: Math.floor(Math.random() * 50) + 20,
-        views: Math.floor(Math.random() * 100) + 50
-      });
-    }
-    
-    return data;
-  };
-
-  const recentActivities = [
-    { id: 1, user: 'John Doe', action: 'uploaded', item: 'Advanced Calculus.pdf', time: '10 minutes ago' },
-    { id: 2, user: 'Jane Smith', action: 'downloaded', item: 'Physics Notes.docx', time: '25 minutes ago' },
-    { id: 3, user: 'Alex Johnson', action: 'deleted', item: 'Old Lecture Recordings', time: '1 hour ago' },
-    { id: 4, user: 'Emma Wilson', action: 'shared', item: 'Computer Science Project', time: '2 hours ago' },
-    { id: 5, user: 'Michael Brown', action: 'commented on', item: 'Machine Learning Notes', time: '3 hours ago' }
-  ];
 
   const handleStartUpload = () => {
     setShowUploadWorkflow(true);
@@ -337,6 +318,7 @@ export const AdminDashboard = () => {
         id: response.data.resource._id || Date.now().toString(),
         ...data,
         uploadDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         fileName: fileName,
         fileContent: fileContent,
         stats: {
@@ -358,27 +340,6 @@ export const AdminDashboard = () => {
     } catch (error) {
       console.error('Error uploading resource:', error);
       toast.error('Failed to upload resource');
-      
-      // Fallback to client-side only if API fails
-      const newResource: FacultyResource = {
-        id: Date.now().toString(),
-        ...data,
-        uploadDate: new Date().toISOString(),
-        fileName: fileName,
-        fileContent: fileContent,
-        stats: {
-          views: 0,
-          likes: 0,
-          comments: 0,
-          downloads: 0,
-          lastViewed: new Date().toISOString()
-        }
-      };
-      
-      window.sharedResources = [newResource, ...window.sharedResources];
-      setResources([newResource, ...resources]);
-      setShowResourceUpload(false);
-      setCurrentView('dashboard');
     }
   };
   
@@ -524,22 +485,28 @@ export const AdminDashboard = () => {
                 <h2 className="text-lg font-semibold dark:text-gray-200">Weekly Activity</h2>
               </div>
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analytics.dailyActivity.data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="uploads" fill="#4F46E5" />
-                    <Bar dataKey="downloads" fill="#10B981" />
-                    <Bar dataKey="views" fill="#F59E0B" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {analytics.dailyActivity.data.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analytics.dailyActivity.data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="uploads" fill="#4F46E5" />
+                      <Bar dataKey="downloads" fill="#10B981" />
+                      <Bar dataKey="views" fill="#F59E0B" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-gray-500">No activity data available</p>
+                  </div>
+                )}
               </div>
             </motion.div>
 
-            {/* Department Distribution */}
+            {/* Resource Type Distribution */}
             <motion.div 
               className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
               variants={itemVariants}
@@ -549,27 +516,33 @@ export const AdminDashboard = () => {
                 <h2 className="text-lg font-semibold dark:text-gray-200">Resource Type Distribution</h2>
               </div>
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPie>
-                    <Pie
-                      data={analytics.resourceTypes.data}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      nameKey="name"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {analytics.resourceTypes.data.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </RechartsPie>
-                </ResponsiveContainer>
+                {analytics.resourceTypes.data.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie>
+                      <Pie
+                        data={analytics.resourceTypes.data}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        nameKey="name"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {analytics.resourceTypes.data.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </RechartsPie>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-gray-500">No resource type data available</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>

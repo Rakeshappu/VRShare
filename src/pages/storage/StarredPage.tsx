@@ -16,7 +16,13 @@ interface StarredResource {
   subject: string;
   uploadDate?: string;
   createdAt: string;
-  viewCount: number;
+  stats: {
+    views: number;
+    downloads: number;
+    likes: number;
+    comments: number;
+    lastViewed?: string;
+  };
   uploadedBy?: {
     name: string;
     id: string;
@@ -105,7 +111,7 @@ export const StarredPage = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      await fetch(`/api/resources/${id}/view`, {
+      const response = await fetch(`/api/resources/${id}/view`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,14 +119,18 @@ export const StarredPage = () => {
         }
       });
       
-      // Update local view count
-      setStarredItems(
-        starredItems.map(item => 
-          item._id === id 
-            ? { ...item, viewCount: (item.viewCount || 0) + 1 } 
-            : item
-        )
-      );
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update the view count in the local state
+        setStarredItems(prevItems => 
+          prevItems.map(item => 
+            item._id === id 
+              ? { ...item, stats: { ...item.stats, views: data.views || (item.stats?.views || 0) + 1 }} 
+              : item
+          )
+        );
+      }
     } catch (error) {
       console.error('Error updating view count:', error);
     }
@@ -212,7 +222,7 @@ export const StarredPage = () => {
                 
                 <div className="flex items-center text-xs text-gray-500 mb-2">
                   <Eye className="h-3.5 w-3.5 mr-1" />
-                  <span>{item.viewCount || 0} views</span>
+                  <span>{item.stats?.views || 0} views</span>
                 </div>
                 
                 <div className="flex items-center text-xs text-gray-500 mb-2">
