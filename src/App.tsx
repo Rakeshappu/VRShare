@@ -1,406 +1,229 @@
-
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { Header } from './components/layout/Header';
-import { Sidebar } from './components/layout/Sidebar';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthPage } from './pages/auth/AuthPage';
-import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
-import { FacultyDashboard } from './pages/faculty/FacultyDashboard';
-import { Dashboard } from './components/dashboard/Dashboard';
+import { HomePage } from './pages/home/HomePage';
 import { ProfilePage } from './pages/profile/ProfilePage';
-import { StudyMaterialsPage } from './pages/study/StudyMaterialsPage';
-import PrivateRoute from './components/auth/PrivateRoute';
-import { StarredPage as StudentStarredPage } from './pages/storage/StarredPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
+import { AuthProvider } from './contexts/AuthContext';
+import { PrivateRoute } from './components/auth/PrivateRoute';
+import { Toaster } from 'react-hot-toast';
+import { CompetitiveProgramming } from './pages/competitive/CompetitiveProgramming';
+import { PlacementResourcesPage } from './pages/placement/PlacementResourcesPage';
 import { DownloadsPage } from './pages/storage/DownloadsPage';
-import { TrashPage as StudentTrashPage } from './pages/storage/TrashPage';
-import { SettingsPage as StudentSettingsPage } from './pages/settings/SettingsPage';
-import AdminDashboard  from './pages/admin/AdminDashboard';
-import PlacementResources from './pages/placement/PlacementResources';
-import { SubjectDetailPage } from './pages/study/SubjectDetailPage';
-import UsersManagement from './pages/admin/UsersManagement';
-import AllResources from './pages/admin/AllResources';
-import EligibleUSNs from './pages/admin/EligibleUSNs';
-
-import AnalyticsPage from './pages/faculty/AnalyticsPage';
+import { TrashPage } from './pages/storage/TrashPage';
+import { StarredPage } from './pages/storage/StarredPage';
+import { FacultyDashboard } from './pages/faculty/FacultyDashboard';
+import { AnalyticsPage } from './pages/faculty/AnalyticsPage';
 import { StudentsPage } from './pages/faculty/StudentsPage';
-import { StarredPage as FacultyStarredPage } from './pages/faculty/StarredPage';
-import { TrashPage as FacultyTrashPage } from './pages/faculty/TrashPage';
-import { SettingsPage as FacultySettingsPage } from './pages/faculty/SettingsPage';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { UsersManagement } from './pages/admin/UsersManagement';
+import { AllResources } from './pages/admin/AllResources';
+import { EligibleUSNs } from './pages/admin/EligibleUSNs';
+import { StudyMaterialsPage } from './pages/study/StudyMaterialsPage';
+import { SubjectDetailPage } from './pages/study/SubjectDetailPage';
+import { StudentDashboard } from './pages/student/StudentDashboard';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StudentCompetitiveProgramming } from './pages/study/StudentCompetitiveProgramming';
+import { AdminApprovalPendingPage } from './pages/auth/AdminApprovalPendingPage';
+import { default as FacultyUpload } from './pages/faculty/upload';
 
-import FacultyUploadPage from './pages/faculty/upload';
-import AdminUploadPage from './pages/admin/upload';
-import StudentCompetitiveProgramming from './pages/competitive/StudentCompetitiveProgramming';
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function App() {
-  const skipAuth = true;
-
   return (
-    <Router>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                skipAuth ? 
-                <Navigate to="/dashboard" replace /> : 
-                <Navigate to="/auth" replace />
-              } 
-            />
-            
-            <Route path="/auth/*" element={<AuthPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <Dashboard />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-           
-            <Route
-              path="/study-materials"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudyMaterialsPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/study/:subject"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <SubjectDetailPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/placement"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <PlacementResources />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/starred"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudentStarredPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/downloads"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <DownloadsPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/trash"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudentTrashPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudentSettingsPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            
-            <Route
-              path="/faculty/dashboard"
-              element={
-                <PrivateRoute role="faculty">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <FacultyDashboard />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/faculty/upload"
-              element={
-                <PrivateRoute role="faculty">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <FacultyUploadPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/faculty/analytics"
-              element={
-                <PrivateRoute role="faculty">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <AnalyticsPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/faculty/students"
-              element={
-                <PrivateRoute role="faculty">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudentsPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/faculty/starred"
-              element={
-                <PrivateRoute role="faculty">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <FacultyStarredPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/faculty/trash"
-              element={
-                <PrivateRoute role="faculty">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <FacultyTrashPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/faculty/settings"
-              element={
-                <PrivateRoute role="faculty">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <FacultySettingsPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            
-            <Route
-              path="/admin/dashboard"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <AdminDashboard />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/admin/upload"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <AdminUploadPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/admin/users"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <UsersManagement />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/admin/resources"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <AllResources 
-                        onViewAnalytics={(resourceId) => {
-                          window.location.href = `/admin/resources/${resourceId}/analytics`;
-                        }}
-                      />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/admin/trash"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudentTrashPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/admin/settings"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudentSettingsPage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            
-            <Route
-              path="/admin/eligible-usns"
-              element={
-                <PrivateRoute role="admin">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <EligibleUSNs />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-            
-            <Route
-              path="/profile"
-              element={
-                <PrivateRoute>
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <ProfilePage />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
+        <Toaster position="top-right" />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/auth/*" element={<AuthPage />} />
+          <Route path="/admin-approval-pending" element={<AdminApprovalPendingPage />} />
 
-            <Route
-              path="/competitive-programming"
-              element={
-                <PrivateRoute role="student">
-                  <div className="flex">
-                    <Sidebar />
-                    <div className="flex-1">
-                      <Header />
-                      <StudentCompetitiveProgramming />
-                    </div>
-                  </div>
-                </PrivateRoute>
-              }
-            />
-          </Routes>
-        </div>
+          {/* Admin routes */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <PrivateRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <PrivateRoute allowedRoles={['admin']}>
+                <UsersManagement />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/resources"
+            element={
+              <PrivateRoute allowedRoles={['admin']}>
+                <AllResources />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/eligible-usns"
+            element={
+              <PrivateRoute allowedRoles={['admin']}>
+                <EligibleUSNs />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Faculty routes */}
+          <Route
+            path="/faculty/dashboard"
+            element={
+              <PrivateRoute allowedRoles={['faculty']}>
+                <FacultyDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/faculty/analytics"
+            element={
+              <PrivateRoute allowedRoles={['faculty']}>
+                <AnalyticsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/faculty/students"
+            element={
+              <PrivateRoute allowedRoles={['faculty']}>
+                <StudentsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/faculty/trash"
+            element={
+              <PrivateRoute allowedRoles={['faculty']}>
+                <TrashPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/faculty/upload"
+            element={
+              <PrivateRoute allowedRoles={['faculty']}>
+                <Navigate to="/faculty/upload/select" replace />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/faculty/upload/*"
+            element={
+              <PrivateRoute allowedRoles={['faculty']}>
+                <FacultyUpload />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Student routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute allowedRoles={['student']}>
+                <StudentDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/study-materials"
+            element={
+              <PrivateRoute allowedRoles={['student']}>
+                <StudyMaterialsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/study-materials/:subjectId"
+            element={
+              <PrivateRoute allowedRoles={['student']}>
+                <SubjectDetailPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/competitive-programming"
+            element={
+              <PrivateRoute allowedRoles={['student']}>
+                <StudentCompetitiveProgramming />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Common routes for both student and faculty */}
+          <Route
+            path="/placement"
+            element={
+              <PrivateRoute allowedRoles={['student', 'faculty']}>
+                <PlacementResourcesPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/downloads"
+            element={
+              <PrivateRoute allowedRoles={['student', 'faculty']}>
+                <DownloadsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/starred"
+            element={
+              <PrivateRoute allowedRoles={['student', 'faculty']}>
+                <StarredPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/trash"
+            element={
+              <PrivateRoute allowedRoles={['student', 'faculty']}>
+                <TrashPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/competitive"
+            element={
+              <PrivateRoute allowedRoles={['student', 'faculty']}>
+                <CompetitiveProgramming />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute allowedRoles={['student', 'faculty', 'admin']}>
+                <ProfilePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute allowedRoles={['student', 'faculty', 'admin']}>
+                <SettingsPage />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
       </AuthProvider>
-    </Router>
+    </QueryClientProvider>
   );
 }
 

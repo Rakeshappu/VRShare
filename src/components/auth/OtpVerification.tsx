@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 interface OtpVerificationProps {
   email: string;
@@ -89,7 +89,11 @@ export const OtpVerification = ({ email, onResendOtp }: OtpVerificationProps) =>
     
     setIsSubmitting(true);
     try {
-      await verifyOTP(email, otpString);
+      if (verifyOTP) {
+        await verifyOTP(email, otpString);
+      } else {
+        console.error("verifyOTP function is undefined");
+      }
     } catch (err) {
       console.error('OTP verification failed:', err);
     } finally {
