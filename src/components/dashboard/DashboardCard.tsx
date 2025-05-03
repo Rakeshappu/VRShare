@@ -10,7 +10,7 @@ interface DashboardCardProps {
   onClick?: () => void;
 }
 
-export const DashboardCard = ({ 
+const DashboardCard = ({ 
   title, 
   value, 
   icon, 
