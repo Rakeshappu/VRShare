@@ -1,24 +1,22 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
+
 import { 
   BarChart2, 
   Users, 
   Settings, 
   FolderOpen, 
   Upload, 
-  Download, 
   Star, 
   Trash, 
   Menu, 
   X,
   FileText,
-  Share2,
   ShieldCheck,
   Database,
-  GraduationCap,
-  Code
+  GraduationCap
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -45,7 +43,6 @@ export const Sidebar = () => {
     }
   };
 
-  // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const sidebar = document.getElementById('sidebar');
@@ -71,15 +68,19 @@ export const Sidebar = () => {
       <SidebarLink icon={<FolderOpen />} text="My Files" path="/dashboard" active={isActive('/dashboard')} />
       <SidebarLink icon={<FileText />} text="Study Materials" path="/study-materials" active={isActive('/study-materials')} />
       <SidebarLink icon={<Star />} text="Starred" path="/starred" active={isActive('/starred')} />
-      <SidebarLink icon={<Download />} text="Downloads" path="/downloads" active={isActive('/downloads')} />
-      <SidebarLink icon={<Code />} text="Competitive Programming" path="/competitive-programming" active={isActive('/competitive-programming')} />
+      {/* Trash link removed for students */}
     </>
   );
 
   const FacultyLinks = () => (
     <>
       <SidebarLink icon={<FolderOpen />} text="My Resources" path="/faculty/dashboard" active={isActive('/faculty/dashboard')} />
-      <SidebarLink icon={<Upload />} text="Upload" path="/faculty/upload" active={isActive('/faculty/upload')} />
+      <SidebarLink 
+        icon={<Upload />} 
+        text="Upload" 
+        path="/faculty/upload" 
+        active={isActive('/faculty/upload')} 
+      />
       <SidebarLink icon={<BarChart2 />} text="Analytics" path="/faculty/analytics" active={isActive('/faculty/analytics')} />
       <SidebarLink icon={<Trash />} text="Trash" path="/faculty/trash" active={isActive('/faculty/trash')} />
     </>
@@ -118,7 +119,6 @@ export const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile toggle button that appears in the header */}
       <button 
         id="sidebar-toggle"
         className="md:hidden fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md"
@@ -127,7 +127,6 @@ export const Sidebar = () => {
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
       
-      {/* Sidebar */}
       <aside 
         id="sidebar"
         className={`bg-white dark:bg-gray-800 shadow-lg fixed inset-y-0 left-0 z-40 transition-transform duration-300 
@@ -136,8 +135,8 @@ export const Sidebar = () => {
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div onClick={handleLogoClick} className="flex items-center space-x-3 cursor-pointer">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg">
-              <Share2 className="w-5 h-5" />
+            <div className="relative flex items-center justify-center w-10 h-9 rounded-full text-white shadow-lg">
+              <span><img src="/uploads/cropped.png" alt="logo" className="h-13 w-18"/></span>
             </div>
             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">VersatileShare</h2>
           </div>
@@ -181,28 +180,47 @@ export const Sidebar = () => {
   );
 };
 
-const SidebarLink = ({ 
-  icon, 
-  text, 
-  path, 
-  active 
-}: { 
+interface SidebarLinkProps { 
   icon: React.ReactNode; 
   text: string; 
   path: string;
   active: boolean;
-}) => (
-  <Link
-    to={path}
-    className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-      active 
-        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
-        : 'text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400'
-    }`}
-  >
-    <span className={active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}>{icon}</span>
-    <span>{text}</span>
-  </Link>
-);
+  specialAction?: () => void;
+}
+
+const SidebarLink = ({ 
+  icon, 
+  text, 
+  path, 
+  active,
+  specialAction
+}: SidebarLinkProps) => {
+  
+  const navigate = useNavigate();
+  
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (specialAction) {
+      specialAction();
+    } else {
+      navigate(path);
+    }
+  };
+
+  return (
+    <Link
+      to={path}
+      onClick={handleClick}
+      className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+        active 
+          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
+          : 'text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400'
+      }`}
+    >
+      <span className={active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}>{icon}</span>
+      <span>{text}</span>
+    </Link>
+  );
+};
 
 export default Sidebar;

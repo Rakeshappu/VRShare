@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SubjectData, SubjectFolder } from '../../types/faculty';
 import { UploadOptionSelection } from './upload/UploadOptionSelection';
 import { SemesterSelection } from './upload/SemesterSelection';
@@ -10,28 +10,45 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { createResource } from '../../services/resource.service';
 
-type UploadOption = 'semester' | 'common' | 'placement' | 'subject-folder' | 'direct-upload';
+type UploadOption = 'semester' | 'placement' | 'subject-folder' | 'direct-upload';
 type SemesterNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 interface UploadWorkflowProps {
   onSelectOption: (option: string, data?: any) => void;
   onCancel: () => void;
   showAvailableSubjects?: boolean;
+  isFromSidebar?: boolean; // Flag to identify if this is initiated from sidebar
 }
+
+// Storage key for semester to ensure consistent behavior across both sidebar and dashboard
+const SEMESTER_STORAGE_KEY = 'eduShareSelectedSemester';
 
 export const UploadWorkflow = ({ 
   onSelectOption, 
   onCancel,
-  showAvailableSubjects = false
+  showAvailableSubjects = false,
+  isFromSidebar = false
 }: UploadWorkflowProps) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'initial' | 'semester-selection' | 'subject-creation' | 'placement-category' | 'placement-upload'>('initial');
-  const [selectedSemester, setSelectedSemester] = useState<SemesterNumber | null>(null);
+  const [step, setStep] = useState<'initial' | 'semester-selection' | 'subject-creation' | 'placement-category' | 'placement-upload' | 'direct-upload'>('initial');
+  
+  // Get the semester from localStorage if available, otherwise default to 1
+  const [selectedSemester, setSelectedSemester] = useState<SemesterNumber>(() => {
+    const storedSemester = localStorage.getItem(SEMESTER_STORAGE_KEY);
+    return storedSemester ? Number(storedSemester) as SemesterNumber : 1;
+  });
+  
   const [selectedCategory, setSelectedCategory] = useState<{id: string, name: string} | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   
   // Get existing subjects
   const existingSubjects: SubjectFolder[] = window.subjectFolders || [];
+
+  // Save selected semester to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(SEMESTER_STORAGE_KEY, selectedSemester.toString());
+    console.log('Saved semester to localStorage:', selectedSemester);
+  }, [selectedSemester]);
 
   const handleInitialSelection = (option: UploadOption) => {
     if (option === 'semester') {
@@ -41,22 +58,25 @@ export const UploadWorkflow = ({
     } else if (option === 'placement') {
       // For placement resources, go to placement categories
       setStep('placement-category');
-    } else if (option === 'common') {
-      // For common resources, skip semester selection
-      onSelectOption('direct-upload', { 
-        resourceType: 'common',
-        subject: 'Common Resources',
-        category: 'common'
-      });
-    } else {
-      // For direct upload, pass directly to parent
-      onSelectOption(option);
+    } else if (option === 'direct-upload') {
+      // For direct upload, pass directly to parent with current semester if selected
+      if (isFromSidebar) {
+        setStep('direct-upload');
+      } else {
+        onSelectOption('direct-upload', { semester: selectedSemester });
+      }
     }
   };
 
   const handleSemesterSelect = (semester: SemesterNumber) => {
     setSelectedSemester(semester);
-    setStep('subject-creation');
+    
+    // If from sidebar, we need to go to the next appropriate step
+    if (isFromSidebar) {
+      setStep('subject-creation'); // Default to subject creation
+    } else {
+      setStep('subject-creation');
+    }
   };
 
   const handlePlacementCategorySelect = (categoryId: string, categoryName: string) => {
@@ -66,10 +86,33 @@ export const UploadWorkflow = ({
   };
 
   const handleCreateSubjectFolders = (newSubjects: SubjectData[]) => {
-    onSelectOption('create-subject-folders', { 
-      semester: selectedSemester, 
-      subjects: newSubjects 
-    });
+    if (isFromSidebar) {
+      // Handle sidebar create subject folders
+      console.log('Creating subject folders from sidebar:', newSubjects);
+      onSelectOption('create-subject-folders', { 
+        semester: selectedSemester, 
+        subjects: newSubjects 
+      });
+      // Navigate after action
+      navigate('/faculty/dashboard');
+    } else {
+      // Normal behavior for dashboard
+      onSelectOption('create-subject-folders', { 
+        semester: selectedSemester, 
+        subjects: newSubjects 
+      });
+    }
+  };
+
+  const handleSkipToUpload = () => {
+    // When skipping to direct upload, pass the selected semester
+    if (isFromSidebar) {
+      setStep('direct-upload');
+    } else {
+      onSelectOption('direct-upload', { 
+        semester: selectedSemester 
+      });
+    }
   };
 
   const handlePlacementUpload = async (data: any) => {
@@ -115,6 +158,7 @@ export const UploadWorkflow = ({
           subject: `Placement - ${selectedCategory.name}`,
           semester: 0,
           uploadDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
           fileName: data.file?.name,
           fileUrl: response.fileUrl,
           stats: {
@@ -135,6 +179,41 @@ export const UploadWorkflow = ({
     } catch (error: any) {
       console.error('Upload error:', error);
       toast.error(error.message || 'Failed to upload placement resource');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSidebarDirectUpload = async (data: any) => {
+    setIsUploading(true);
+    try {
+      // Create a new FormData object for the upload
+      const formData = new FormData();
+      
+      // Add all the necessary fields
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('type', data.type);
+      formData.append('subject', data.subject);
+      formData.append('semester', String(selectedSemester));
+      
+      // Add file or link based on the resource type
+      if (data.type === 'link') {
+        formData.append('link', data.link);
+      } else if (data.file) {
+        formData.append('file', data.file);
+      }
+      
+      // Upload the resource directly using the service
+      const response = await createResource(formData);
+      console.log('Resource created from sidebar:', response);
+      
+      // After successful upload, navigate to dashboard
+      toast.success('Resource uploaded successfully!');
+      navigate('/faculty/dashboard');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Failed to upload resource');
     } finally {
       setIsUploading(false);
     }
@@ -167,7 +246,7 @@ export const UploadWorkflow = ({
         <SubjectCreationForm
           selectedSemester={selectedSemester}
           onBack={() => selectedSemester ? setStep('semester-selection') : setStep('initial')}
-          onSkipToUpload={() => onSelectOption('direct-upload')}
+          onSkipToUpload={handleSkipToUpload}
           onCreateSubjectFolders={handleCreateSubjectFolders}
           existingSubjectsForSemester={existingSubjectsForSemester}
           showAvailableSubjects={showAvailableSubjects}
@@ -196,6 +275,28 @@ export const UploadWorkflow = ({
             initialCategory="placement"
             isPlacementResource={true}
             placementCategory={selectedCategory.id}
+          />
+        </div>
+      )}
+      
+      {step === 'direct-upload' && (
+        <div>
+          <button
+            onClick={() => setStep('initial')}
+            className="mb-4 text-indigo-600 hover:text-indigo-700 flex items-center"
+          >
+            ← Back to Options
+          </button>
+          <ResourceUpload 
+            onUpload={isFromSidebar ? handleSidebarDirectUpload : async (data) => {
+              setIsUploading(true);
+              try {
+                await onSelectOption('direct-upload', { ...data, semester: selectedSemester });
+              } finally {
+                setIsUploading(false);
+              }
+            }}
+            initialSemester={selectedSemester || 1}
           />
         </div>
       )}

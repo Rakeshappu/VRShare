@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Header } from './components/layout/Header';
@@ -13,7 +14,7 @@ import { StarredPage as StudentStarredPage } from './pages/storage/StarredPage';
 import { DownloadsPage } from './pages/storage/DownloadsPage';
 import { TrashPage as StudentTrashPage } from './pages/storage/TrashPage';
 import { SettingsPage as StudentSettingsPage } from './pages/settings/SettingsPage';
-import { AdminDashboard } from './pages/admin/AdminDashboard';
+import AdminDashboard  from './pages/admin/AdminDashboard';
 import PlacementResources from './pages/placement/PlacementResources';
 import { SubjectDetailPage } from './pages/study/SubjectDetailPage';
 import UsersManagement from './pages/admin/UsersManagement';
@@ -26,8 +27,9 @@ import { StarredPage as FacultyStarredPage } from './pages/faculty/StarredPage';
 import { TrashPage as FacultyTrashPage } from './pages/faculty/TrashPage';
 import { SettingsPage as FacultySettingsPage } from './pages/faculty/SettingsPage';
 
-import { UploadWorkflow } from './components/faculty/UploadWorkflow';
-import StudentCompetitiveProgramming from './pages/study/StudentCompetitiveProgramming';
+import FacultyUploadPage from './pages/faculty/upload';
+import AdminUploadPage from './pages/admin/upload';
+import StudentCompetitiveProgramming from './pages/competitive/StudentCompetitiveProgramming';
 
 function App() {
   const skipAuth = true;
@@ -185,22 +187,7 @@ function App() {
                     <Sidebar />
                     <div className="flex-1">
                       <Header />
-                      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                        <UploadWorkflow 
-                          onSelectOption={(option, data) => {
-                            console.log("Selected option:", option, data);
-                            if (option === 'direct-upload' && data) {
-                              if (data.resourceType === 'placement') {
-                                console.log("Handling placement resource upload:", data);
-                              }
-                            }
-                          }} 
-                          onCancel={() => {
-                            window.location.href = '/faculty/dashboard';
-                          }}
-                          showAvailableSubjects={true}
-                        />
-                      </div>
+                      <FacultyUploadPage />
                     </div>
                   </div>
                 </PrivateRoute>
@@ -299,17 +286,7 @@ function App() {
                     <Sidebar />
                     <div className="flex-1">
                       <Header />
-                      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                        <UploadWorkflow 
-                          onSelectOption={(option, data) => {
-                            console.log("Admin selected option:", option, data);
-                          }}
-                          onCancel={() => {
-                            window.location.href = '/admin/dashboard';
-                          }}
-                          showAvailableSubjects={true}
-                        />
-                      </div>
+                      <AdminUploadPage />
                     </div>
                   </div>
                 </PrivateRoute>

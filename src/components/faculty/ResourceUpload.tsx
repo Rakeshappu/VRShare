@@ -23,7 +23,9 @@ export const ResourceUpload = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [selectedSemester, setSelectedSemester] = useState<number>(initialSemester || 1);
+  const [selectedSemester, setSelectedSemester] = useState<number>(
+    initialSemester !== undefined ? initialSemester : 1
+  );
   const [semesterSubjects, setSemesterSubjects] = useState<SubjectFolder[]>([]);
   
   const [formData, setFormData] = useState<UploadFormData>({
@@ -31,13 +33,14 @@ export const ResourceUpload = ({
     description: '',
     type: 'document',
     subject: initialSubject || '',
-    semester: initialSemester || 1,
+    semester: initialSemester !== undefined ? initialSemester : 1,
     file: undefined,
     link: '',
     category: initialCategory,
     placementCategory: placementCategory
   });
 
+  // This effect runs when the selectedSemester changes
   useEffect(() => {
     if (isPlacementResource) {
       return;
@@ -60,6 +63,18 @@ export const ResourceUpload = ({
     }
   }, [selectedSemester, formData.semester, isPlacementResource, initialSubject]);
 
+  // Initialize selectedSemester based on initialSemester
+  useEffect(() => {
+    if (initialSemester !== undefined) {
+      console.log("Setting semester from prop:", initialSemester);
+      setSelectedSemester(initialSemester);
+      setFormData(prev => ({
+        ...prev,
+        semester: initialSemester
+      }));
+    }
+  }, [initialSemester]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -74,7 +89,9 @@ export const ResourceUpload = ({
   };
   
   const handleSemesterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedSemester(Number(e.target.value));
+    const newSemester = Number(e.target.value);
+    console.log("Changing semester to:", newSemester);
+    setSelectedSemester(newSemester);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

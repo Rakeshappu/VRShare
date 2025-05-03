@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { MongoDBStatusBanner } from '../../components/auth/MongoDBStatusBanner';
+import { checkDatabaseConnection } from '../../services/resource.service';
 import { Users, FileText, Upload, Download, Shield, Activity, PieChart } from 'lucide-react';
 import { ResourceUpload } from '../../components/faculty/ResourceUpload';
 import { ResourceList } from '../../components/faculty/ResourceList';
@@ -10,7 +14,6 @@ import api from '../../services/api';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 
-// Access the shared resources
 declare global {
   interface Window {
     sharedResources: FacultyResource[];
@@ -18,7 +21,6 @@ declare global {
   }
 }
 
-// Initialize if needed
 if (typeof window !== 'undefined') {
   if (!window.sharedResources) {
     window.sharedResources = [];
@@ -50,7 +52,7 @@ const itemVariants = {
   }
 };
 
-export const AdminDashboard = () => {
+const AdminDashboard = () => {
   const [resources, setResources] = useState<FacultyResource[]>(typeof window !== 'undefined' ? window.sharedResources : []);
   const [showUploadWorkflow, setShowUploadWorkflow] = useState(false);
   const [showResourceUpload, setShowResourceUpload] = useState(false);
@@ -68,20 +70,32 @@ export const AdminDashboard = () => {
     uploads: 0,
     downloads: 0
   });
+  const [dbStatus, setDbStatus] = useState<any>(null);
 
-  // Fetch real analytics data
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const status = await checkDatabaseConnection();
+        setDbStatus(status);
+        console.log('MongoDB connection status in Admin Dashboard:', status);
+      } catch (err) {
+        console.error('Failed to check DB connection:', err);
+      }
+    };
+    
+    checkConnection();
+  }, []);
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
         setIsLoading(true);
         
-        // Use fetch directly instead of axios to avoid issues
         const token = localStorage.getItem('token');
         if (!token) {
           throw new Error('Not authenticated');
         }
 
-        // Fetch resources stats
         const resourcesStatsResponse = await fetch('/api/resources/stats', {
           method: 'GET',
           headers: {
@@ -95,7 +109,6 @@ export const AdminDashboard = () => {
         
         const resourcesStatsData = await resourcesStatsResponse.json();
         
-        // Fetch users count by role
         const usersResponse = await fetch('/api/user/stats', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -107,7 +120,6 @@ export const AdminDashboard = () => {
           usersData = await usersResponse.json();
         }
         
-        // Fetch activity stats
         const activityResponse = await fetch('/api/user/activity/stats', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -119,7 +131,22 @@ export const AdminDashboard = () => {
           activityData = await activityResponse.json();
         }
         
-        // Calculate today's uploads and downloads
+        let dailyActivityChartData = [];
+        
+        if (activityData && activityData.dailyActivity && activityData.dailyActivity.length > 0) {
+          dailyActivityChartData = activityData.dailyActivity;
+        } else if (resourcesStatsData && resourcesStatsData.dailyActivity && resourcesStatsData.dailyActivity.length > 0) {
+          dailyActivityChartData = resourcesStatsData.dailyActivity;
+        } else {
+          const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          dailyActivityChartData = days.map(day => ({
+            name: day,
+            uploads: 0,
+            downloads: 0,
+            views: 0
+          }));
+        }
+        
         const today = new Date().toISOString().split('T')[0];
         let todayUploads = 0;
         let todayDownloads = 0;
@@ -134,7 +161,6 @@ export const AdminDashboard = () => {
           downloads: todayDownloads
         });
         
-        // Update analytics state with real data
         setAnalytics({
           users: { 
             total: usersData?.totalUsers || 0, 
@@ -157,7 +183,7 @@ export const AdminDashboard = () => {
             loading: false
           },
           dailyActivity: {
-            data: resourcesStatsData?.dailyActivity || [],
+            data: dailyActivityChartData,
             loading: false
           }
         });
@@ -165,7 +191,6 @@ export const AdminDashboard = () => {
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching analytics:', error);
-        // Don't use mock data, instead show empty states
         setAnalytics({
           users: { total: 0, loading: false },
           resources: { total: resources.length, loading: false },
@@ -186,7 +211,6 @@ export const AdminDashboard = () => {
 
     fetchAnalytics();
     
-    // Poll for resource updates to simulate real-time
     const intervalId = setInterval(() => {
       if (window.sharedResources !== resources) {
         setResources([...window.sharedResources]);
@@ -196,7 +220,6 @@ export const AdminDashboard = () => {
     return () => clearInterval(intervalId);
   }, [resources]);
 
-  // Fetch real resources
   useEffect(() => {
     const fetchResources = async () => {
       try {
@@ -273,14 +296,12 @@ export const AdminDashboard = () => {
   const handleUpload = async (data: UploadFormData) => {
     console.log('Uploading resource:', data);
     
-    // For file uploads, read the file content to make it accessible
     let fileContent = '';
     let fileName = '';
     
     if (data.file) {
       fileName = data.file.name;
       
-      // Read file data to store it
       if (data.type !== 'link') {
         try {
           fileContent = await readFileAsBase64(data.file);
@@ -291,7 +312,6 @@ export const AdminDashboard = () => {
     }
     
     try {
-      // Create a FormData object to send to the API
       const formData = new FormData();
       formData.append('title', data.title);
       formData.append('description', data.description);
@@ -307,7 +327,6 @@ export const AdminDashboard = () => {
         formData.append('link', data.link);
       }
       
-      // Send the API request
       const response = await api.post('/api/resources', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -330,7 +349,6 @@ export const AdminDashboard = () => {
         }
       };
       
-      // Update both local state and shared resources for real-time updates
       window.sharedResources = [newResource, ...window.sharedResources];
       setResources([newResource, ...resources]);
       
@@ -342,8 +360,7 @@ export const AdminDashboard = () => {
       toast.error('Failed to upload resource');
     }
   };
-  
-  // Function to read file as base64 string
+
   const readFileAsBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -362,7 +379,6 @@ export const AdminDashboard = () => {
   };
 
   const handleViewAnalytics = (resourceId: string) => {
-    // Admin would manage resources, not view analytics
     console.log(`View details for resource ${resourceId}`);
   };
 
@@ -372,7 +388,6 @@ export const AdminDashboard = () => {
     setCurrentView('dashboard');
   };
 
-  // Colors for charts
   const COLORS = ['#4F46E5', '#7C3AED', '#EC4899', '#10B981', '#F59E0B', '#6366F1'];
 
   if (isLoading) {
@@ -384,249 +399,248 @@ export const AdminDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      {currentView === 'dashboard' && (
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-        >
-          <motion.div 
-            className="flex items-center mb-6"
-            variants={itemVariants}
+    <div>
+      <MongoDBStatusBanner status={dbStatus} />
+      <div className="container mx-auto p-6">
+        {currentView === 'dashboard' && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
           >
-            <Shield className="mr-2 text-indigo-500" size={24} />
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</h1>
-          </motion.div>
-
-          {/* Stats Cards */}
-          <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-            variants={itemVariants}
-          >
-            <AnalyticsCard 
-              title="Total Users" 
-              value={analytics.users.loading ? '...' : analytics.users.total}
-              change="12%" 
-              trend="up" 
-              icon={<Users className="h-6 w-6 text-indigo-500" />}
-              isLoading={analytics.users.loading} 
-            />
-            <AnalyticsCard 
-              title="Total Resources" 
-              value={analytics.resources.loading ? '...' : analytics.resources.total}
-              change="8%" 
-              trend="up" 
-              icon={<FileText className="h-6 w-6 text-green-500" />}
-              isLoading={analytics.resources.loading} 
-            />
-            <AnalyticsCard 
-              title="Uploads Today" 
-              value={todayStats.uploads}
-              change="15%" 
-              trend="up" 
-              icon={<Upload className="h-6 w-6 text-blue-500" />}
-            />
-            <AnalyticsCard 
-              title="Downloads Today" 
-              value={todayStats.downloads}
-              change="5%" 
-              trend="down" 
-              icon={<Download className="h-6 w-6 text-yellow-500" />}
-            />
-          </motion.div>
-
-          {/* Quick Action Buttons */}
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
-            variants={itemVariants}
-          >
-            <motion.button 
-              onClick={handleStartUpload}
-              className="flex items-center justify-center p-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Upload className="mr-2" size={20} />
-              Upload New Content
-            </motion.button>
-            <motion.button 
-              className="flex items-center justify-center p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              onClick={() => setCurrentView('resources')}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <FileText className="mr-2" size={20} />
-              Manage Resources
-            </motion.button>
-            <motion.button 
-              className="flex items-center justify-center p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              onClick={() => window.location.href = '/admin/users'}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Users className="mr-2" size={20} />
-              Manage Users
-            </motion.button>
-          </motion.div>
-
-          {/* Analytics Charts */}
-          <motion.div 
-            className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
-            variants={itemVariants}
-          >
-            {/* Daily Activity Chart */}
             <motion.div 
-              className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
+              className="flex items-center mb-6"
               variants={itemVariants}
             >
-              <div className="flex items-center mb-4">
-                <Activity className="mr-2 text-indigo-500" size={20} />
-                <h2 className="text-lg font-semibold dark:text-gray-200">Weekly Activity</h2>
-              </div>
-              <div className="h-80">
-                {analytics.dailyActivity.data.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analytics.dailyActivity.data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="uploads" fill="#4F46E5" />
-                      <Bar dataKey="downloads" fill="#10B981" />
-                      <Bar dataKey="views" fill="#F59E0B" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-gray-500">No activity data available</p>
-                  </div>
-                )}
-              </div>
+              <Shield className="mr-2 text-indigo-500" size={24} />
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</h1>
             </motion.div>
 
-            {/* Resource Type Distribution */}
             <motion.div 
-              className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
               variants={itemVariants}
             >
-              <div className="flex items-center mb-4">
-                <PieChart className="mr-2 text-indigo-500" size={20} />
-                <h2 className="text-lg font-semibold dark:text-gray-200">Resource Type Distribution</h2>
-              </div>
-              <div className="h-80">
-                {analytics.resourceTypes.data.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPie>
-                      <Pie
-                        data={analytics.resourceTypes.data}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              <AnalyticsCard 
+                title="Total Users" 
+                value={analytics.users.loading ? '...' : analytics.users.total}
+                change="12%" 
+                trend="up" 
+                icon={<Users className="h-6 w-6 text-indigo-500" />}
+                isLoading={analytics.users.loading} 
+              />
+              <AnalyticsCard 
+                title="Total Resources" 
+                value={analytics.resources.loading ? '...' : analytics.resources.total}
+                change="8%" 
+                trend="up" 
+                icon={<FileText className="h-6 w-6 text-green-500" />}
+                isLoading={analytics.resources.loading} 
+              />
+              <AnalyticsCard 
+                title="Uploads Today" 
+                value={todayStats.uploads}
+                change="15%" 
+                trend="up" 
+                icon={<Upload className="h-6 w-6 text-blue-500" />}
+              />
+              <AnalyticsCard 
+                title="Downloads Today" 
+                value={todayStats.downloads}
+                change="5%" 
+                trend="down" 
+                icon={<Download className="h-6 w-6 text-yellow-500" />}
+              />
+            </motion.div>
+
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+              variants={itemVariants}
+            >
+              <motion.button 
+                onClick={handleStartUpload}
+                className="flex items-center justify-center p-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Upload className="mr-2" size={20} />
+                Upload New Content
+              </motion.button>
+              <motion.button 
+                className="flex items-center justify-center p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                onClick={() => setCurrentView('resources')}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <FileText className="mr-2" size={20} />
+                Manage Resources
+              </motion.button>
+              <motion.button 
+                className="flex items-center justify-center p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => window.location.href = '/admin/users'}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Users className="mr-2" size={20} />
+                Manage Users
+              </motion.button>
+            </motion.div>
+
+            <motion.div 
+              className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
+              variants={itemVariants}
+            >
+              <motion.div 
+                className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
+                variants={itemVariants}
+              >
+                <div className="flex items-center mb-4">
+                  <Activity className="mr-2 text-indigo-500" size={20} />
+                  <h2 className="text-lg font-semibold dark:text-gray-200">Weekly Activity</h2>
+                </div>
+                <div className="h-80">
+                  {analytics.dailyActivity.data.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analytics.dailyActivity.data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="uploads" fill="#4F46E5" />
+                        <Bar dataKey="downloads" fill="#10B981" />
+                        <Bar dataKey="views" fill="#F59E0B" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-gray-500">No activity data available</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+
+              <motion.div 
+                className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
+                variants={itemVariants}
+              >
+                <div className="flex items-center mb-4">
+                  <PieChart className="mr-2 text-indigo-500" size={20} />
+                  <h2 className="text-lg font-semibold dark:text-gray-200">Resource Type Distribution</h2>
+                </div>
+                <div className="h-80">
+                  {analytics.resourceTypes.data.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPie>
+                        <Pie
+                          data={analytics.resourceTypes.data}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          nameKey="name"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {analytics.resourceTypes.data.map((_entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </RechartsPie>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-gray-500">No resource type data available</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {window.subjectFolders && window.subjectFolders.length > 0 && (
+              <motion.div 
+                className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg mb-8"
+                variants={itemVariants}
+              >
+                <div className="px-4 py-5 sm:px-6 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <FileText className="mr-2 text-indigo-500" size={20} />
+                    <h2 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+                      Available Subject Folders
+                    </h2>
+                  </div>
+                  <span className="text-sm text-gray-500">{window.subjectFolders.length} folders</span>
+                </div>
+                <div className="border-t border-gray-200 dark:border-gray-700">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                    {window.subjectFolders.map((folder, index) => (
+                      <motion.div 
+                        key={index} 
+                        className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        whileHover={{ scale: 1.03, boxShadow: "0px 4px 10px rgba(0,0,0,0.1)" }}
+                        transition={{ type: "spring", stiffness: 300 }}
                       >
-                        {analytics.resourceTypes.data.map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </RechartsPie>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-gray-500">No resource type data available</p>
+                        <h3 className="font-semibold text-gray-800 dark:text-gray-200">{folder.subjectName}</h3>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p>Lecturer: {folder.lecturerName}</p>
+                          <p>Semester: {folder.semester}</p>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
-                )}
-              </div>
-            </motion.div>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
+        )}
 
-          {/* Subject Folders Section */}
-          {window.subjectFolders && window.subjectFolders.length > 0 && (
-            <motion.div 
-              className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg mb-8"
-              variants={itemVariants}
-            >
-              <div className="px-4 py-5 sm:px-6 flex items-center justify-between">
-                <div className="flex items-center">
-                  <FileText className="mr-2 text-indigo-500" size={20} />
-                  <h2 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
-                    Available Subject Folders
-                  </h2>
-                </div>
-                <span className="text-sm text-gray-500">{window.subjectFolders.length} folders</span>
-              </div>
-              <div className="border-t border-gray-200 dark:border-gray-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                  {window.subjectFolders.map((folder, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
-                      whileHover={{ scale: 1.03, boxShadow: "0px 4px 10px rgba(0,0,0,0.1)" }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      <h3 className="font-semibold text-gray-800 dark:text-gray-200">{folder.subjectName}</h3>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <p>Lecturer: {folder.lecturerName}</p>
-                        <p>Semester: {folder.semester}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
-      )}
+        {currentView === 'resources' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={handleGoBack}
+                className="text-indigo-600 hover:text-indigo-700 flex items-center space-x-2"
+              >
+                <span>← Back to Dashboard</span>
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Manage Resources</h1>
+            </div>
+            
+            <ResourceList
+              resources={resources}
+              onViewAnalytics={handleViewAnalytics}
+              showDeleteButton={true}
+            />
+          </div>
+        )}
 
-      {currentView === 'resources' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between mb-6">
+        {currentView === 'upload' && (
+          <div className="space-y-4">
             <button
               onClick={handleGoBack}
-              className="text-indigo-600 hover:text-indigo-700 flex items-center space-x-2"
+              className="mb-4 text-indigo-600 hover:text-indigo-700 flex items-center space-x-2"
             >
               <span>← Back to Dashboard</span>
             </button>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Manage Resources</h1>
+            
+            {showUploadWorkflow && (
+              <UploadWorkflow 
+                onSelectOption={handleSelectUploadOption} 
+                onCancel={handleGoBack}
+                showAvailableSubjects={true}
+              />
+            )}
+            
+            {showResourceUpload && (
+              <ResourceUpload onUpload={handleUpload} />
+            )}
           </div>
-          
-          <ResourceList
-            resources={resources}
-            onViewAnalytics={handleViewAnalytics}
-            showDeleteButton={true}
-          />
-        </div>
-      )}
-
-      {currentView === 'upload' && (
-        <div className="space-y-4">
-          <button
-            onClick={handleGoBack}
-            className="mb-4 text-indigo-600 hover:text-indigo-700 flex items-center space-x-2"
-          >
-            <span>← Back to Dashboard</span>
-          </button>
-          
-          {showUploadWorkflow && (
-            <UploadWorkflow 
-              onSelectOption={handleSelectUploadOption} 
-              onCancel={handleGoBack}
-              showAvailableSubjects={true}
-            />
-          )}
-          
-          {showResourceUpload && (
-            <ResourceUpload onUpload={handleUpload} />
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
+
+export default AdminDashboard;

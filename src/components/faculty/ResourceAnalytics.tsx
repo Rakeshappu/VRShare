@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { User, ThumbsUp, MessageSquare } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
@@ -46,7 +46,15 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
   const [isLoadingLikes, setIsLoadingLikes] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [detailedAnalytics, setDetailedAnalytics] = useState<any>(null);
-  const [realDailyViews, setRealDailyViews] = useState<Array<{ date: string; count: number }>>(analytics.dailyViews || []);
+  const [realDailyViews, setRealDailyViews] = useState<Array<{ date: string; count: number }>>([]);
+  
+  // Define engagement chart data (replacing Activity Over Past Week)
+  const engagementData = [
+    { name: 'Views', value: detailedAnalytics?.views || analytics.views || 0, color: '#4F46E5' },
+    { name: 'Likes', value: detailedAnalytics?.likes || analytics.likes || 0, color: '#EF4444' },
+    { name: 'Comments', value: detailedAnalytics?.comments || analytics.comments || 0, color: '#10B981' },
+    { name: 'Downloads', value: detailedAnalytics?.downloads || analytics.downloads || 0, color: '#F59E0B' },
+  ];
 
   useEffect(() => {
     if (resourceId) {
@@ -54,13 +62,47 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
     }
   }, [resourceId]);
 
-  // Format daily views data for chart display
   useEffect(() => {
-    if (detailedAnalytics && detailedAnalytics.dailyViews) {
-      setRealDailyViews(detailedAnalytics.dailyViews);
-    } else if (analytics.dailyViews) {
-      setRealDailyViews(analytics.dailyViews);
+    let viewsData: Array<{ date: string; count: number }> = [];
+    
+    if (detailedAnalytics && detailedAnalytics.dailyViews && detailedAnalytics.dailyViews.length > 0) {
+      viewsData = [...detailedAnalytics.dailyViews];
+    } else if (analytics.dailyViews && analytics.dailyViews.length > 0) {
+      viewsData = [...analytics.dailyViews];
     }
+    
+    // Get the current date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayString = today.toISOString().split('T')[0];
+    
+    // Check if today's date already exists in the data
+    const hasToday = viewsData.some(item => {
+      const itemDate = new Date(item.date);
+      itemDate.setHours(0, 0, 0, 0);
+      const itemDateString = itemDate.toISOString().split('T')[0];
+      return itemDateString === todayString;
+    });
+    
+    // Add today's date if it doesn't exist
+    if (!hasToday) {
+      viewsData.push({
+        date: todayString,
+        count: 0
+      });
+    }
+    
+    // Sort the dates in ascending order
+    viewsData.sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+    
+    // Only show the last 7 days
+    if (viewsData.length > 7) {
+      viewsData = viewsData.slice(-7);
+    }
+    
+    setRealDailyViews(viewsData);
   }, [detailedAnalytics, analytics.dailyViews]);
 
   const fetchDetailedAnalytics = async () => {
@@ -70,13 +112,11 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
     setIsLoadingComments(true);
     
     try {
-      // Fetch analytics data including likes and comments
       const response = await api.get(`/api/resources/${resourceId}/analytics`);
       
       if (response.data) {
         setDetailedAnalytics(response.data);
         
-        // Set likes data
         if (response.data.likedBy && Array.isArray(response.data.likedBy)) {
           setLikeData(response.data.likedBy.map((user: any) => ({
             userId: user._id,
@@ -88,7 +128,6 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
           })));
         }
         
-        // Set comments data
         if (response.data.commentDetails && Array.isArray(response.data.commentDetails)) {
           setCommentData(response.data.commentDetails);
         }
@@ -102,10 +141,8 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
     }
   };
 
-  // Fallback: Fetch likes and comments if detailed analytics fail
   useEffect(() => {
     if (!detailedAnalytics && resourceId) {
-      // Fetch like data
       const fetchLikeData = async () => {
         setIsLoadingLikes(true);
         try {
@@ -120,7 +157,6 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
         }
       };
 
-      // Fetch comment data
       const fetchCommentData = async () => {
         setIsLoadingComments(true);
         try {
@@ -140,6 +176,12 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
     }
   }, [resourceId, detailedAnalytics]);
 
+  // Format date for x-axis properly
+  const formatDateForXAxis = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getDate()+1}/${date.getMonth() + 1}`;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-6">Analytics for "{resourceTitle}"</h2>
@@ -151,32 +193,53 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
         <StatCard title="Downloads" value={detailedAnalytics?.downloads || analytics.downloads} icon="📥" />
       </div>
       
-      <div className="bg-gray-50 p-4 rounded-lg mb-8">
-        <h3 className="text-lg font-medium text-gray-800 mb-4">Daily Views</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            data={realDailyViews}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="date" 
-              tickFormatter={(date) => {
-                const d = new Date(date);
-                return `${d.getDate()}/${d.getMonth() + 1}`;
-              }} 
-            />
-            <YAxis />
-            <Tooltip
-              labelFormatter={(date) => new Date(date).toLocaleDateString()}
-              formatter={(value) => [`${value} views`, 'Views']}
-            />
-            <Bar dataKey="count" fill="#4F46E5" />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="text-lg font-medium text-gray-800 mb-4">Daily Views</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={realDailyViews}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={formatDateForXAxis}
+              />
+              <YAxis />
+              <Tooltip
+                labelFormatter={(dateStr) => `Date: ${new Date(dateStr).toLocaleDateString()}`}
+                formatter={(value) => [`${value} views`, 'Views']}
+              />
+              <Bar dataKey="count" fill="#4F46E5" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="text-lg font-medium text-gray-800 mb-4">Overall Engagement</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={engagementData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              >
+                {engagementData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => [value, 'Count']} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
       
-      {/* Who Liked This Resource Section */}
       <div className="mb-8">
         <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
           <ThumbsUp className="h-5 w-5 text-green-600 mr-2" />
@@ -210,7 +273,6 @@ export const ResourceAnalyticsView = ({ analytics, resourceTitle, resourceId }: 
         )}
       </div>
       
-      {/* Comments Section */}
       <div>
         <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
           <MessageSquare className="h-5 w-5 text-blue-600 mr-2" />

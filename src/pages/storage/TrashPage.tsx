@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { Trash, FileText, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { format, addDays, parseISO } from 'date-fns';
+import { formatDateSafely, addDaysSafely } from '../../utils/dateUtils';
 
 interface TrashedItem {
   id: string;
@@ -45,7 +46,13 @@ export const TrashPage = () => {
       }
 
       const data = await response.json();
-      setTrashedItems(data.items);
+      
+      // Filter to ensure we only get items with deletedAt value
+      const validTrashedItems = Array.isArray(data.items) ? 
+        data.items.filter(item => item.deletedAt && item.deletedAt !== null && item.deletedAt !== 'null') : 
+        [];
+      
+      setTrashedItems(validTrashedItems);
     } catch (error) {
       console.error('Error fetching trashed items:', error);
       setError('Failed to fetch trashed items');
@@ -153,10 +160,10 @@ export const TrashPage = () => {
                         <span className="mx-1">•</span>
                         <span>{item.size}</span>
                         <span className="mx-1">•</span>
-                        <span>Deleted on {format(parseISO(item.deletedAt), 'MMM dd, yyyy')}</span>
+                        <span>Deleted on {formatDateSafely(item.deletedAt, 'MMM dd, yyyy')}</span>
                       </p>
                       <p className="text-xs text-red-500">
-                        Will be deleted permanently on {format(addDays(parseISO(item.deletedAt), 30), 'MMM dd, yyyy')}
+                        Will be deleted permanently on {addDaysSafely(item.deletedAt, 30, 'MMM dd, yyyy')}
                       </p>
                     </div>
                   </div>
