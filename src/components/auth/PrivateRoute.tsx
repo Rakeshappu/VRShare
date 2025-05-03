@@ -1,19 +1,20 @@
-import React, { useEffect } from 'react';
+
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { AnimatedLogo } from '../common/AnimatedLogo';
-import { UserRole } from '../../types/auth';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { API_ROUTES } from '../../lib/api/routes';
 import { forceReloginIfNeeded } from '../../utils/authUtils';
+import { UserRole } from '../../types/auth';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
-  role?: 'student' | 'faculty' | 'admin';
+  allowedRoles: UserRole[];
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
+const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -24,8 +25,8 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
     );
   }
 
-  useEffect(() => {
-    if (!loading && user && role === 'admin' && user.role === 'admin') {
+  React.useEffect(() => {
+    if (!loading && user && allowedRoles.includes('admin') && user.role === 'admin') {
       api.get(API_ROUTES.AUTH.ADMIN_CHECK)
         .then(response => {
           console.log('Admin verification successful:', response.data);
@@ -41,13 +42,13 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
           }
         });
     }
-  }, [user, loading, role]);
+  }, [user, loading, allowedRoles]);
 
   console.log('PrivateRoute - Authentication check:', { 
     isLoading: loading, 
     userExists: !!user, 
     userRole: user?.role, 
-    requiredRole: role 
+    requiredRoles: allowedRoles 
   });
 
   if (!user) {
@@ -56,17 +57,17 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, role }) => {
   }
 
   console.log('PrivateRoute - Current user role:', user.role);
-  console.log('PrivateRoute - Required role:', role);
+  console.log('PrivateRoute - Required roles:', allowedRoles);
 
   if (user.role === 'admin') {
     console.log('User is admin, granting access to route');
     return <>{children}</>;
   }
 
-  if (role && user.role !== role) {
-    console.log(`Access denied: User is ${user.role} but route requires ${role}`);
+  if (!allowedRoles.includes(user.role)) {
+    console.log(`Access denied: User is ${user.role} but route requires one of ${allowedRoles.join(', ')}`);
     
-    toast.error(`This section requires ${role} access`);
+    toast.error(`This section requires ${allowedRoles.join(' or ')} access`);
     
     if (user.role === 'faculty') {
       return <Navigate to="/faculty/dashboard" />;
