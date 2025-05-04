@@ -126,8 +126,8 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
       type: [],
       category: []
     });
-    onSearchResults([], false);
     setHasUserSearched(false);
+    onSearchResults([], false); // Clear the search results immediately
   };
 
   return (

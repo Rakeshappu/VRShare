@@ -1,5 +1,6 @@
+
 import { useEffect, useState } from 'react';
-import { Award, Calendar } from 'lucide-react';
+import { Award, Calendar, BookOpen } from 'lucide-react';
 import { User } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { activityService } from '../../services/activity.service';
