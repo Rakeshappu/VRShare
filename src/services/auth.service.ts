@@ -96,32 +96,6 @@ const authService = {
     }
   },
   
-  // Add the missing verifyOTP function
-  verifyOTP: async (email: string, otp: string) => {
-    try {
-      const response = await api.post('/api/auth/verify-otp', { email, otp });
-      return response.data;
-    } catch (error: any) {
-      if (error.response && error.response.data?.error) {
-        throw new Error(error.response.data.error);
-      }
-      throw error;
-    }
-  },
-  
-  // Add the missing resendOTP function
-  resendOTP: async (email: string) => {
-    try {
-      const response = await api.post('/api/auth/send-otp', { email });
-      return response.data;
-    } catch (error: any) {
-      if (error.response && error.response.data?.error) {
-        throw new Error(error.response.data.error);
-      }
-      throw error;
-    }
-  },
-  
   // Check if the user is authenticated based on token and expiry
   isAuthenticated: () => {
     const token = localStorage.getItem('token');

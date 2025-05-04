@@ -13,8 +13,6 @@ export interface AuthContextType {
   error: string | null;
   clearError: () => void;
   updateUser?: (userData: Partial<User>) => void;
-  verifyOTP?: (email: string, otp: string) => Promise<any>;
-  resendOTP?: (email: string) => Promise<any>;
 }
 
 // User type definition
@@ -71,24 +69,4 @@ export interface Notification {
   resourceId?: string;
   createdAt: Date | string;
   read: boolean;
-}
-
-// Search resource interface for search results
-export interface SearchResource {
-  _id: string;
-  title: string;
-  description: string;
-  fileUrl: string;
-  type: string;
-  subject: string;
-  semester: number;
-  uploadedBy: string;
-  uploadDate: string;
-  fileName: string;
-  likes?: number;
-  views?: number;
-  downloads?: number;
-  sourceType?: 'local' | 'external';
-  externalSource?: string;
-  thumbnail?: string;
 }

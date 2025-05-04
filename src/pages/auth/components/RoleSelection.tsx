@@ -1,85 +1,83 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+
+import { useNavigate } from 'react-router-dom';
 import { UserRole } from '../../../types/auth';
+import { GraduationCap, Users, Share2, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import cropped from '../../../../public/uploads/cropped.png'
 
-interface RoleSelectionProps {
-  onRoleSelect: (role: UserRole) => void;
-  selectedRole: UserRole | null;
-}
+export const RoleSelection = () => {
+  const navigate = useNavigate();
 
-export const RoleSelection: React.FC<RoleSelectionProps> = ({ onRoleSelect, selectedRole }) => {
-  const [hoveredRole, setHoveredRole] = useState<UserRole | null>(null);
-
-  const roles: { id: UserRole; title: string; description: string }[] = [
-    {
-      id: 'student',
-      title: 'Student',
-      description: 'Access study materials, assignments, and track your academic progress.',
-    },
-    {
-      id: 'faculty',
-      title: 'Faculty',
-      description: 'Upload resources, manage courses, and interact with students.',
-    },
-  ];
+  const handleRoleSelect = (role: UserRole) => {
+    localStorage.setItem('selectedRole', role);
+    navigate('/auth/signup');
+  };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center mb-6">
-        <div className="flex justify-center mb-4">
-          <div className="relative flex items-center justify-center w-16 h-16 rounded-full text-white shadow-lg">
-            <span><img src="/uploads/cropped.png" alt="logo" className="h-16 w-16"/></span>
-          </div>
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Choose Your Role</h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Select the role that best describes you
-        </p>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+      <motion.div
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="text-center mb-10"
+      >
+        <div className="flex items-center justify-center mb-6">
+          {/* <Share2 className="h-12 w-12 text-indigo-600" /> */}
+          <span><img src={cropped} alt="logo" className="h-20 w-30"/></span>
 
-      <div className="space-y-4">
-        {roles.map((role) => (
-          <motion.div
-            key={role.id}
-            className={`p-4 border rounded-lg cursor-pointer transition-all ${
-              selectedRole === role.id
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
-                : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
-            }`}
-            onClick={() => onRoleSelect(role.id)}
-            onMouseEnter={() => setHoveredRole(role.id)}
-            onMouseLeave={() => setHoveredRole(null)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="flex items-center">
-              <div
-                className={`w-5 h-5 rounded-full border ${
-                  selectedRole === role.id
-                    ? 'border-indigo-500 bg-indigo-500'
-                    : 'border-gray-300 dark:border-gray-600'
-                } flex items-center justify-center mr-3`}
-              >
-                {selectedRole === role.id && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-2 h-2 bg-white rounded-full"
-                  />
-                )}
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-white">{role.title}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {role.description}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+          <span className="ml-2 text-4xl font-bold text-indigo-600">VersatileShare</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-900">
+          Choose Your Role
+        </h2>
+        <p className="mt-2 text-lg text-gray-600">
+          Select how you'll use VersatileShare
+        </p>
+      </motion.div>
+      
+      <div className="w-full max-w-md space-y-4">
+        <motion.button
+          initial={{ x: -100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          whileHover={{ scale: 1.03 }}
+          onClick={() => handleRoleSelect('student')}
+          className="group relative w-full flex items-center justify-center py-6 px-4 border-2 border-indigo-100 text-lg font-medium rounded-xl text-indigo-600 bg-white hover:bg-indigo-50 transition-all shadow-md hover:shadow-lg"
+        >
+          <span className="absolute left-0 inset-y-0 flex items-center pl-6">
+            <GraduationCap className="h-8 w-8 text-indigo-500" />
+          </span>
+          <span className="ml-4">Continue as Student</span>
+        </motion.button>
+
+        <motion.button
+          initial={{ x: 100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          whileHover={{ scale: 1.03 }}
+          onClick={() => handleRoleSelect('faculty')}
+          className="group relative w-full flex items-center justify-center py-6 px-4 border-2 border-purple-100 text-lg font-medium rounded-xl text-purple-600 bg-white hover:bg-purple-50 transition-all shadow-md hover:shadow-lg"
+        >
+          <span className="absolute left-0 inset-y-0 flex items-center pl-6">
+            <Users className="h-8 w-8 text-purple-500" />
+          </span>
+          <span className="ml-4">Continue as Faculty</span>
+        </motion.button>
+        
+        <motion.button
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+          whileHover={{ scale: 1.03 }}
+          onClick={() => handleRoleSelect('admin')}
+          className="group relative w-full flex items-center justify-center py-6 px-4 border-2 border-red-100 text-lg font-medium rounded-xl text-red-600 bg-white hover:bg-red-50 transition-all shadow-md hover:shadow-lg"
+        >
+          <span className="absolute left-0 inset-y-0 flex items-center pl-6">
+            <ShieldCheck className="h-8 w-8 text-red-500" />
+          </span>
+          <span className="ml-4">Continue as Administrator</span>
+        </motion.button>
       </div>
     </div>
   );
 };
-
-export default RoleSelection;
