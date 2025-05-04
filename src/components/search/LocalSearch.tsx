@@ -150,6 +150,7 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
               type="button"
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               onClick={clearSearch}
+              aria-label="Clear search"
             >
               <X className="h-5 w-5" />
             </button>
@@ -158,6 +159,7 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
             type="button"
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             onClick={() => setShowFilters(!showFilters)}
+            aria-label="Show filters"
           >
             <Filter className="h-5 w-5" />
           </button>
