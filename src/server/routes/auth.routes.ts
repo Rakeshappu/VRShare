@@ -30,7 +30,8 @@ router.get('/admin-check', authMiddleware, (req, res) => {
     res.json({ 
       message: 'You have admin access', 
       user: req.user, 
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
+      success: true
     });
   } else {
     console.error(`Admin access denied for user with role: ${tokenRole || 'undefined'}`);
@@ -40,7 +41,8 @@ router.get('/admin-check', authMiddleware, (req, res) => {
       error: 'Admin access required',
       tokenRole: tokenRole || 'undefined',
       userId: req.user?.userId,
-      message: 'Your token does not contain admin role information. Please log out and log back in.'
+      message: 'Your token does not contain admin role information. Please log out and log back in.',
+      success: false
     });
   }
 });

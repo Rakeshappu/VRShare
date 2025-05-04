@@ -7,6 +7,9 @@ import jwt from 'jsonwebtoken';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(200).end();
   }
   
@@ -20,16 +23,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      console.error('Missing or invalid Authorization header');
+      return res.status(401).json({ error: 'Not authenticated', details: 'Missing or invalid token' });
     }
     
-    // Verify token
+    // Extract and verify token
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string, role: string };
+    console.log('Verifying token for admin operation...');
+    
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development';
+    let decoded;
+    
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string, role: string };
+    } catch (tokenError) {
+      console.error('Token verification failed:', tokenError);
+      return res.status(401).json({ error: 'Invalid token', details: 'Token verification failed' });
+    }
+    
+    // Log decoded token info
+    console.log('Token decoded for user verification:', { userId: decoded.userId, role: decoded.role });
     
     // Ensure the user is an admin
     if (decoded.role !== 'admin') {
-      return res.status(403).json({ error: 'Not authorized' });
+      console.error(`Admin verification denied. User role in token: ${decoded.role || 'undefined'}`);
+      return res.status(403).json({ 
+        error: 'Not authorized', 
+        details: 'Admin role required for this operation',
+        role: decoded.role
+      });
     }
     
     // Get user ID and verify action from request body

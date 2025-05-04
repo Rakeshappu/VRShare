@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BarChart2, Book, X } from 'lucide-react';
 import { UserBanner } from '../user/UserBanner';
@@ -130,9 +131,10 @@ export const Dashboard = () => {
     }
   };
 
-  // Close search results - fixed to properly reset the state
+  // Close search results - fixed to ensure state is properly reset
   const handleCloseSearchResults = () => {
     setSearchPerformed(false);
+    console.log('Search results closed, searchPerformed set to:', false);
   };
 
   return (

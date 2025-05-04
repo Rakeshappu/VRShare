@@ -128,6 +128,7 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
     });
     setHasUserSearched(false);
     onSearchResults([], false); // Clear the search results immediately
+    console.log('Search cleared, results reset');
   };
 
   return (
