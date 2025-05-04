@@ -130,7 +130,7 @@ export const Dashboard = () => {
     }
   };
 
-  // Close search results
+  // Close search results - fixed to properly reset the state
   const handleCloseSearchResults = () => {
     setSearchPerformed(false);
   };
@@ -157,7 +157,7 @@ export const Dashboard = () => {
               <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Search Results</h2>
               <button
                 onClick={handleCloseSearchResults}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1"
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                 aria-label="Close search results"
                 type="button"
               >

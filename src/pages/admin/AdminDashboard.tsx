@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { MongoDBStatusBanner } from '../../components/auth/MongoDBStatusBanner';
 import { checkDatabaseConnection } from '../../services/resource.service';
-import { Users, FileText, UserCheck, Shield, Activity, PieChart } from 'lucide-react';
+import { Users, FileText, UserCheck, Shield, Activity, PieChart, Upload } from 'lucide-react';
 import { ResourceUpload } from '../../components/faculty/ResourceUpload';
 import { ResourceList } from '../../components/faculty/ResourceList';
 import { UploadWorkflow } from '../../components/faculty/UploadWorkflow';
