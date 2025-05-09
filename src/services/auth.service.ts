@@ -136,6 +136,50 @@ const authService = {
     const now = new Date();
     
     return now < expiryDate;
+  },
+  
+  // Get token from localStorage
+  getToken: () => {
+    return localStorage.getItem('token');
+  },
+  
+  // Refresh token if needed
+  refreshTokenIfNeeded: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const tokenExpiry = localStorage.getItem('tokenExpiry');
+      
+      if (!token || !tokenExpiry) {
+        return false;
+      }
+      
+      const expiryDate = new Date(tokenExpiry);
+      const now = new Date();
+      
+      // If token expires in less than 1 hour, refresh it
+      const oneHour = 60 * 60 * 1000;
+      if ((expiryDate.getTime() - now.getTime()) < oneHour) {
+        console.log('Token will expire soon, refreshing...');
+        
+        // Call refresh token endpoint
+        const response = await api.post('/api/auth/refresh-token', { token });
+        
+        if (response.data.token) {
+          // Update token and expiry
+          localStorage.setItem('token', response.data.token);
+          const newExpiryTime = new Date();
+          newExpiryTime.setDate(newExpiryTime.getDate() + 30);
+          localStorage.setItem('tokenExpiry', newExpiryTime.toString());
+          
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      return false;
+    }
   }
 };
 

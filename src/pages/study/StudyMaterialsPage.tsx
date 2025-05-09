@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { LocalSearch } from '../../components/search/LocalSearch';
 import { SubjectFolder } from '../../components/study/SubjectFolder';
@@ -233,7 +232,6 @@ export const StudyMaterialsPage = () => {
           />
         </motion.div>
       )}
-      
       {isSearchActive ? (
         <>
           <motion.div 
@@ -314,7 +312,7 @@ export const StudyMaterialsPage = () => {
         </>
       )}
     </motion.div>
-  );
-};
-
-export default StudyMaterialsPage;
+    );
+  };
+  
+  export default StudyMaterialsPage;

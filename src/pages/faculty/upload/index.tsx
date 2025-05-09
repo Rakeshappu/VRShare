@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { UploadWorkflow } from '../../../components/faculty/UploadWorkflow';
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { createResource } from '../../../services/resource.service';
+// import createResource  from '../../../services/resource.service';
 import { ArrowLeft } from 'lucide-react';
 
 const FacultyUploadPage = () => {
@@ -44,8 +44,8 @@ const FacultyUploadPage = () => {
         }
         
         // Upload the resource directly using the service
-        const response = await createResource(formData);
-        console.log('Resource uploaded:', response);
+        // const response = await createResource(formData);
+        // console.log('Resource uploaded:', response);
         
         // After successful upload, navigate to dashboard
         toast.success('Resource uploaded successfully!');

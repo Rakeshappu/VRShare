@@ -8,7 +8,7 @@ import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
 import { FacultyDashboard } from './pages/faculty/FacultyDashboard';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { ProfilePage } from './pages/profile/ProfilePage';
-import { StudyMaterialsPage } from './pages/study/StudyMaterialsPage';
+import StudyMaterialsPage  from './pages/study/StudyMaterialsPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import { StarredPage as StudentStarredPage } from './pages/storage/StarredPage';
 import { DownloadsPage } from './pages/storage/DownloadsPage';
@@ -20,7 +20,7 @@ import { SubjectDetailPage } from './pages/study/SubjectDetailPage';
 import UsersManagement from './pages/admin/UsersManagement';
 import AllResources from './pages/admin/AllResources';
 import EligibleUSNs from './pages/admin/EligibleUSNs';
-
+import BulkSemesterUpdate from './pages/admin/BulkSemesterUpdate';
 import AnalyticsPage from './pages/faculty/AnalyticsPage';
 import { StudentsPage } from './pages/faculty/StudentsPage';
 import { StarredPage as FacultyStarredPage } from './pages/faculty/StarredPage';
@@ -319,6 +319,20 @@ function App() {
                           window.location.href = `/admin/resources/${resourceId}/analytics`;
                         }}
                       />
+                    </div>
+                  </div>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin/bulk-semester"
+              element={
+                <PrivateRoute role="admin">
+                  <div className="flex">
+                    <Sidebar />
+                    <div className="flex-1">
+                      <Header />
+                      <BulkSemesterUpdate />
                     </div>
                   </div>
                 </PrivateRoute>

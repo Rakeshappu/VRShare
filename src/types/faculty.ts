@@ -27,6 +27,8 @@ export interface SubjectData {
   subjectName: string;
   lecturerName: string;
   semester: number;
+  name?: string;
+  department?: string;
 }
 
 // Update the FacultyResource interface to include all needed properties
@@ -58,7 +60,7 @@ export interface FacultyResource {
 
 // Define SearchResource interface for search results
 export interface SearchResource {
-  _id: string;
+
   id?: string;
   title: string;
   description?: string;
@@ -70,8 +72,7 @@ export interface SearchResource {
   placementCategory?: string;
   url?: string;
   thumbnailUrl?: string;
-  author?: string;
-  publishDate?: string;
-  score?: number;
+  publishedDate?: string;
   source?: string;
+  author?: string;
 }

@@ -16,7 +16,8 @@ import {
   FileText,
   ShieldCheck,
   Database,
-  GraduationCap
+  GraduationCap,
+  School
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -93,6 +94,7 @@ export const Sidebar = () => {
       <SidebarLink icon={<Users />} text="Manage Users" path="/admin/users" active={isActive('/admin/users')} />
       <SidebarLink icon={<Database />} text="All Resources" path="/admin/resources" active={isActive('/admin/resources')} />
       <SidebarLink icon={<GraduationCap />} text="Eligible USNs" path="/admin/eligible-usns" active={isActive('/admin/eligible-usns')} />
+      <SidebarLink icon={<School />} text="Bulk Semester Update" path="/admin/bulk-semester" active={isActive('/admin/bulk-semester')} />
       <SidebarLink icon={<Trash />} text="Trash" path="/admin/trash" active={isActive('/admin/trash')} />
     </>
   );

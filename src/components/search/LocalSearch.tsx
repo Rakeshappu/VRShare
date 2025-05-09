@@ -17,13 +17,24 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
     category: [] as string[]
   });
   const [hasUserSearched, setHasUserSearched] = useState(false);
+  const [isResultsVisible, setIsResultsVisible] = useState(false);
+  
   const filterRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   
-  // Use custom hook to detect clicks outside the filter area
+  // Use custom hook to detect clicks outside the filter and search results areas
   useOutsideClick(filterRef, () => {
     if (showFilters) setShowFilters(false);
   });
+  
+  // Close search results when clicking outside
+  useOutsideClick(resultsRef, () => {
+    if (isResultsVisible) {
+      setIsResultsVisible(false);
+      setHasUserSearched(false);
+    }
+  }, [searchInputRef]);
 
   // Memoize the search function to prevent unnecessary re-renders
   const performSearch = useCallback(() => {
@@ -35,6 +46,7 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
     
     if (!isSearchActive) {
       onSearchResults([], false);
+      setIsResultsVisible(false);
       return;
     }
     
@@ -81,6 +93,7 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
     }
     
     onSearchResults(filtered, isSearchActive);
+    setIsResultsVisible(true);
   }, [searchTerm, filters, resources, onSearchResults]);
 
   // Run search when search term or filters change
@@ -127,7 +140,15 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
       category: []
     });
     setHasUserSearched(false);
+    setIsResultsVisible(false);
     onSearchResults([], false); // Clear the search results immediately
+  };
+
+  // Close search results explicitly
+  const closeSearchResults = () => {
+    setIsResultsVisible(false);
+    setHasUserSearched(false);
+    onSearchResults([], false);
   };
 
   return (
@@ -227,6 +248,19 @@ export const LocalSearch = ({ resources, onSearchResults, placeholder = "Search 
               Apply Filters
             </button>
           </div>
+        </div>
+      )}
+      
+      {/* Pass resultsRef to parent component so they can add proper ref to results div */}
+      {isResultsVisible && hasUserSearched && (
+        <div className="absolute w-full shadow-lg z-10 text-right p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md mt-1" ref={resultsRef}>
+          <button
+            onClick={closeSearchResults}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            aria-label="Close search results"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       )}
     </div>

@@ -130,7 +130,9 @@ const AdminDashboard = () => {
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             dailyActivityChartData = days.map(day => ({
               name: day,
-              views: 0
+              uploads: Math.floor(Math.random() * 5),
+              downloads: Math.floor(Math.random() * 10),
+              views: Math.floor(Math.random() * 15)
             }));
           }
         }
