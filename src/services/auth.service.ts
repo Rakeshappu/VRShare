@@ -1,4 +1,3 @@
-
 import api from './api';
 import toast from 'react-hot-toast';
 
@@ -62,25 +61,34 @@ const authService = {
 
   forgotPassword: async (email: string) => {
     try {
-      const response = await api.post('/api/auth/forgot-password', { email });
+      // Use the send-otp endpoint with purpose=resetPassword
+      const response = await api.post('/api/auth/send-otp', { 
+        email, 
+        purpose: 'resetPassword' 
+      });
       return response.data;
     } catch (error: any) {
+      console.error('Forgot password error:', error);
       if (error.response && error.response.data?.error) {
         throw new Error(error.response.data.error);
       }
-      throw error;
+      throw new Error('Failed to process password reset request');
     }
   },
 
-  resetPassword: async (token: string, newPassword: string) => {
+  resetPassword: async (email: string, code: string, newPassword: string) => {
     try {
-      const response = await api.post(`/api/auth/reset-password/${token}`, { newPassword });
+      const response = await api.post('/api/auth/reset-password', { 
+        email, 
+        code, 
+        newPassword 
+      });
       return response.data;
     } catch (error: any) {
       if (error.response && error.response.data?.error) {
         throw new Error(error.response.data.error);
       }
-      throw error;
+      throw new Error('Failed to reset password');
     }
   },
 
@@ -96,25 +104,29 @@ const authService = {
     }
   },
   
-  // Add the missing OTP verification method
-  verifyOTP: async (email: string, otp: string) => {
+  // Update the OTP verification method to properly handle purpose
+  verifyOTP: async (email: string, otp: string, purpose?: string) => {
     try {
-      const response = await api.post('/api/auth/verify-otp', { email, otp });
+      const response = await api.post('/api/auth/verify-otp', { email, otp, purpose });
       return response.data;
     } catch (error: any) {
+      console.error('OTP verification error:', error);
       if (error.response && error.response.data?.error) {
         throw new Error(error.response.data.error);
       }
-      throw error;
+      throw new Error('Invalid or expired OTP');
     }
   },
   
-  // Add method to resend OTP
-  resendOTP: async (email: string) => {
+  // Update resend OTP method to ensure it works correctly with purpose parameter
+  resendOTP: async (email: string, purpose?: string) => {
     try {
-      const response = await api.post('/api/auth/send-otp', { email });
+      // Update to use send-otp endpoint with purpose parameter
+      console.log('Resending OTP for', email, 'with purpose:', purpose);
+      const response = await api.post('/api/auth/send-otp', { email, purpose });
       return response.data;
     } catch (error: any) {
+      console.error('Resend OTP error:', error);
       if (error.response && error.response.data?.error) {
         throw new Error(error.response.data.error);
       }

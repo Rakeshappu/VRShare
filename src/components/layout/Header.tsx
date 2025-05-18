@@ -1,5 +1,5 @@
 import { Search, Bell, LogOut, Settings, UserCircle, SunMoon, Loader } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import  {useAuth}  from '../../contexts/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { generateText } from '../../services/openai.service';
