@@ -1,6 +1,7 @@
 
 import axios from 'axios';
 
+// Determine base URL based on environment
 const baseURL = import.meta.env.MODE === 'development' 
     ? 'http://localhost:3000' 
     : window.location.origin;
@@ -10,7 +11,8 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    withCredentials: true,
+    // Important: Setting this to false to avoid CORS credentials issues
+    withCredentials: false,
 });
 
 // Add a request interceptor to include the token in requests

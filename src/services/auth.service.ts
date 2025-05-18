@@ -1,3 +1,4 @@
+
 import api from './api';
 import toast from 'react-hot-toast';
 
@@ -106,13 +107,28 @@ const authService = {
     }
   },
   
-  // Update the OTP verification method to properly handle purpose
+  // Update the OTP verification method to properly handle purpose and CORS issues
   verifyOTP: async (email: string, otp: string, purpose?: string) => {
     try {
       console.log('Verifying OTP:', { email, otp, purpose });
-      const response = await api.post('/api/auth/verify-otp', { email, otp, purpose });
-      console.log('OTP verification response:', response.data);
-      return response.data;
+      
+      // Make a direct fetch call to avoid Axios CORS issues
+      const response = await fetch(`${import.meta.env.MODE === 'development' ? 'http://localhost:3000' : ''}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp, purpose }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Network response was not ok' }));
+        throw new Error(errorData.error || 'Failed to verify OTP');
+      }
+      
+      const data = await response.json();
+      console.log('OTP verification response:', data);
+      return data;
     } catch (error: any) {
       console.error('OTP verification error:', error);
       if (error.response && error.response.data?.error) {
