@@ -80,12 +80,26 @@ const authService = {
   resetPassword: async (email: string, code: string, newPassword: string) => {
     try {
       console.log('Resetting password for:', email);
-      const response = await api.post('/api/auth/reset-password', { 
-        email, 
-        code, 
-        newPassword 
+      // Use fetch directly to avoid CORS issues
+      const baseURL = import.meta.env.MODE === 'development' 
+        ? 'http://localhost:3000' 
+        : window.location.origin;
+      
+      const response = await fetch(`${baseURL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, code, newPassword }),
       });
-      return response.data;
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Network response was not ok' }));
+        throw new Error(errorData.error || 'Failed to reset password');
+      }
+      
+      const data = await response.json();
+      return data;
     } catch (error: any) {
       console.error('Reset password error:', error);
       if (error.response && error.response.data?.error) {
@@ -113,7 +127,11 @@ const authService = {
       console.log('Verifying OTP:', { email, otp, purpose });
       
       // Make a direct fetch call to avoid Axios CORS issues
-      const response = await fetch(`${import.meta.env.MODE === 'development' ? 'http://localhost:3000' : ''}/api/auth/verify-otp`, {
+      const baseURL = import.meta.env.MODE === 'development' 
+        ? 'http://localhost:3000' 
+        : window.location.origin;
+        
+      const response = await fetch(`${baseURL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

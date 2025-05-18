@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import authService from '../../services/auth.service';
@@ -149,6 +149,7 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
       await authService.resetPassword(email, otpString, newPassword);
       
       toast.success('Your password has been reset successfully!');
+      // Redirect to login page after successful password reset
       navigate('/auth/login');
     } catch (err: any) {
       console.error('Password reset failed:', err);
@@ -163,6 +164,10 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
     // Call the resend function and reset timer
     onResendOtp();
     setTimeLeft(30);
+  };
+
+  const goToLogin = () => {
+    navigate('/auth/login');
   };
 
   return (
@@ -223,6 +228,16 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
             >
               {resetSubmitting ? 'Resetting...' : 'Reset Password'}
             </motion.button>
+
+            <div className="text-center mt-4">
+              <button 
+                type="button"
+                onClick={goToLogin}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Back to Login
+              </button>
+            </div>
           </motion.form>
         ) : (
           // OTP verification form
@@ -263,7 +278,7 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
             </div>
             
             <div className="text-center text-sm">
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-2">
                 Didn't receive the OTP?{' '}
                 {timeLeft > 0 ? (
                   <span>Resend in {timeLeft}s</span>
@@ -277,6 +292,10 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
                   </button>
                 )}
               </p>
+              
+              <Link to="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+                Back to Login
+              </Link>
             </div>
           </motion.form>
         )}

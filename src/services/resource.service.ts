@@ -1,4 +1,3 @@
-
 import api from './api';
 import { toast } from 'react-hot-toast';
 
@@ -48,14 +47,38 @@ export const deleteResource = async (resourceId: string) => {
   }
 };
 
-// Check database connection status
+/**
+ * Check database connection
+ * @returns Promise with database status
+ */
 export const checkDatabaseConnection = async () => {
   try {
-    const response = await api.get('/api/db/status');
-    return response.data;
+    // For development, make a direct call to the database status endpoint
+    const baseURL = import.meta.env.MODE === 'development' 
+      ? 'http://localhost:3000' 
+      : window.location.origin;
+      
+    const response = await fetch(`${baseURL}/api/db/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Database connection check failed with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error('Error checking database connection:', error);
-    return { connected: false, error: (error as Error).message };
+    console.error('Failed to check database connection:', error);
+    // Return a structured error response
+    return { 
+      connected: false, 
+      message: error instanceof Error ? error.message : 'Unknown error', 
+      error 
+    };
   }
 };
 
