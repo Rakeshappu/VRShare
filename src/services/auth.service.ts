@@ -89,7 +89,6 @@ const authService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
         },
         body: JSON.stringify({ email, code: code, newPassword }),
         credentials: 'omit' // Don't include credentials for this request
@@ -139,7 +138,6 @@ const authService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
         },
         body: JSON.stringify({ email, otp, purpose }),
         credentials: 'omit' // Don't include credentials for this request

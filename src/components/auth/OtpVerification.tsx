@@ -295,9 +295,13 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
                 )}
               </p>
               
-              <Link to="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <button 
+                type="button" 
+                onClick={goToLogin} 
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
                 Back to Login
-              </Link>
+              </button>
             </div>
           </motion.form>
         )}
