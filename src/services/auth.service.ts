@@ -89,23 +89,27 @@ const authService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
         },
-        body: JSON.stringify({ email, code, newPassword }),
+        body: JSON.stringify({ email, code: code, newPassword }),
+        credentials: 'omit' // Don't include credentials for this request
       });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Network response was not ok' }));
+        console.error('Password reset failed:', errorData);
         throw new Error(errorData.error || 'Failed to reset password');
       }
       
       const data = await response.json();
+      console.log('Password reset successful:', data);
       return data;
     } catch (error: any) {
       console.error('Reset password error:', error);
       if (error.response && error.response.data?.error) {
         throw new Error(error.response.data.error);
       }
-      throw new Error('Failed to reset password');
+      throw error;
     }
   },
 
@@ -135,8 +139,10 @@ const authService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
         },
         body: JSON.stringify({ email, otp, purpose }),
+        credentials: 'omit' // Don't include credentials for this request
       });
       
       if (!response.ok) {

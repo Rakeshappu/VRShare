@@ -150,7 +150,9 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
       
       toast.success('Your password has been reset successfully!');
       // Redirect to login page after successful password reset
-      navigate('/auth/login');
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 1500);
     } catch (err: any) {
       console.error('Password reset failed:', err);
       const errorMessage = err.message || 'Failed to reset password. Please try again.';

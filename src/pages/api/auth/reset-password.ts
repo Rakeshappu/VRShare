@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await connectDB();
 
     const { email, code, newPassword } = req.body;
-    console.log('Password reset request:', { email, codeProvided: !!code });
+    console.log('Password reset request:', { email, codeProvided: !!code, passwordLength: newPassword?.length });
 
     if (!email || !code || !newPassword) {
       return res.status(400).json({ error: 'Email, verification code, and new password are required' });
@@ -61,14 +61,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Update the user's password
+    // Update the user's password and clear verification fields
     user.password = hashedPassword;
     user.verificationCode = undefined;
     user.verificationCodeExpiry = undefined;
+    
+    console.log('Saving new password for user:', user.email);
     await user.save();
-
+    
     console.log('Password reset successful for user:', email);
-
+    
     return res.status(200).json({ success: true, message: 'Password has been successfully reset' });
   } catch (error) {
     console.error('Reset password error:', error);
