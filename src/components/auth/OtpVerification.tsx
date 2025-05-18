@@ -14,7 +14,7 @@ interface OtpVerificationProps {
 }
 
 export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerification' }: OtpVerificationProps) => {
-  const { verifyOTP } = useAuth();
+  const { verifyOTP } = useAuth() || {}; // Fix for undefined error with a fallback
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);

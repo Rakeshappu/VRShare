@@ -58,7 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Verification code has expired' });
     }
 
-    // If verification is for password reset, just return success
+    // If verification is for password reset, just return success without marking email as verified
+    // or clearing the verification code (needed for the actual password reset)
     if (purpose === 'resetPassword') {
       console.log('Valid OTP for password reset purpose');
       return res.status(200).json({

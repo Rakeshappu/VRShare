@@ -78,6 +78,7 @@ const authService = {
 
   resetPassword: async (email: string, code: string, newPassword: string) => {
     try {
+      console.log('Resetting password for:', email);
       const response = await api.post('/api/auth/reset-password', { 
         email, 
         code, 
@@ -85,6 +86,7 @@ const authService = {
       });
       return response.data;
     } catch (error: any) {
+      console.error('Reset password error:', error);
       if (error.response && error.response.data?.error) {
         throw new Error(error.response.data.error);
       }
@@ -107,7 +109,9 @@ const authService = {
   // Update the OTP verification method to properly handle purpose
   verifyOTP: async (email: string, otp: string, purpose?: string) => {
     try {
+      console.log('Verifying OTP:', { email, otp, purpose });
       const response = await api.post('/api/auth/verify-otp', { email, otp, purpose });
+      console.log('OTP verification response:', response.data);
       return response.data;
     } catch (error: any) {
       console.error('OTP verification error:', error);
