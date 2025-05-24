@@ -54,6 +54,10 @@ export const AdminApprovalPending = ({ email }: { email: string }) => {
     setRedirectCountdown(15);
   };
 
+  const handleBackToLogin = () => {
+    navigate('/auth/login');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
       <motion.div 
@@ -111,7 +115,7 @@ export const AdminApprovalPending = ({ email }: { email: string }) => {
         
         <div className="pt-4 flex space-x-4">
           <button
-            onClick={() => navigate('/auth/login')}
+            onClick={handleBackToLogin}
             className="flex-1 flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
