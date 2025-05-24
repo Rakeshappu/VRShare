@@ -1,149 +1,80 @@
 
 import api from './api';
-import { toast } from 'react-hot-toast';
+import { User } from '../lib/db/models/User';
 
-const activityService = {
-  async logActivity(data: {
-    type: 'upload' | 'download' | 'view' | 'like' | 'comment' | 'share';
-    resourceId?: string;
-    message: string;
-  }) {
+interface ActivityData {
+  type: 'view' | 'download' | 'like' | 'comment' | 'upload' | 'search' | 'bookmark';
+  resourceId?: string;
+  message?: string;
+  details?: any;
+  source?: string;
+}
+
+class ActivityService {
+  async logActivity(activityData: ActivityData) {
     try {
-      const response = await api.post('/api/user/activity', data);
+      const response = await api.post('/api/user/activity', activityData);
+      
+      // Only update streak for meaningful activities (not just login)
+      if (['view', 'download', 'like', 'bookmark', 'upload'].includes(activityData.type)) {
+        await this.updateDailyStreak();
+      }
+      
       return response.data;
     } catch (error) {
-      console.error('Failed to log activity:', error);
-      return null;
+      console.error('Error logging activity:', error);
+      throw error;
     }
-  },
+  }
 
-  async getRecentActivities(limit = 3, semester?: number) {
+  async getActivities(limit: number = 10) {
     try {
-      const params = new URLSearchParams();
-      params.append('limit', limit.toString());
-      if (semester) params.append('semester', semester.toString());
-      
-      const response = await api.get(`/api/user/activity?${params.toString()}`);
-      console.log('Recent activities response:', response.data);
+      const response = await api.get(`/api/user/activity?limit=${limit}`);
       return response.data.activities || [];
     } catch (error) {
-      console.error('Failed to fetch activities:', error);
+      console.error('Error fetching activities:', error);
       return [];
     }
-  },
+  }
 
-  async getUserDailyStreak() {
+  async getUserDailyStreak(): Promise<number> {
     try {
-      const response = await api.get('/api/user/activity/stats');
+      const response = await api.get('/api/user/stats');
       return response.data.streak || 0;
     } catch (error) {
-      console.error('Failed to fetch user streak:', error);
+      console.error('Error fetching user streak:', error);
       return 0;
     }
-  },
+  }
 
-  async getTodayActivities() {
+  async updateDailyStreak(): Promise<void> {
+    try {
+      // This will be handled by the backend when logging meaningful activities
+      await api.post('/api/user/activity/streak');
+    } catch (error) {
+      console.error('Error updating daily streak:', error);
+    }
+  }
+
+  async getTodayActivities(): Promise<number> {
     try {
       const response = await api.get('/api/user/activity/stats?period=today');
       return response.data.count || 0;
     } catch (error) {
-      console.error('Failed to fetch today activities:', error);
+      console.error('Error fetching today activities:', error);
       return 0;
-    }
-  },
-  
-  async getWeeklyActivities(isAdmin = false) {
-    try {
-      const url = isAdmin ? '/api/user/activity/stats?admin=true' : '/api/user/activity/stats';
-      console.log('Fetching weekly activities from:', url);
-      const response = await api.get(url);
-      console.log('Weekly activities response:', response.data);
-      return response.data.dailyActivity || [];
-    } catch (error) {
-      console.error('Failed to fetch weekly activities:', error);
-      return [];
-    }
-  },
-
-  async getResourceViewCount(resourceId: string) {
-    try {
-      const response = await api.get(`/api/resources/${resourceId}/stats`);
-      return response.data.views || 0;
-    } catch (error) {
-      console.error('Failed to fetch resource view count:', error);
-      return 0;
-    }
-  },
-  
-  // Update view count for resources with improved error handling
-  async incrementResourceView(resourceId: string) {
-    try {
-      // Don't require token, allow anonymous views
-      const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const response = await api.post(`/api/resources/${resourceId}/view`, {}, { headers });
-      
-      console.log('View count updated response:', response.data);
-      
-      if (response.data.success) {
-        // Notify of successful view
-        const resourceCategory = response.data.category || '';
-        const resourceType = resourceCategory === 'placement' ? 'placement' : 'study';
-        
-        // Don't show toast for every view to avoid spamming
-        // toast.success(`Viewing ${resourceType} resource`);
-        
-        // Force refresh activities immediately after view
-        this.refreshActivities();
-        
-        // Return the updated view data
-        return { 
-          success: true, 
-          views: response.data.views,
-          resourceTitle: response.data.resourceTitle,
-          resourceId: response.data.resourceId,
-          timestamp: response.data.timestamp
-        };
-      } else {
-        console.error('View update returned an error:', response.data);
-        return { success: false };
-      }
-    } catch (error) {
-      console.error('Failed to increment view count:', error);
-      return { success: false };
-    }
-  },
-  
-  // New method to refresh activities after view action
-  async refreshActivities() {
-    try {
-      // Clear any cache and force a fresh fetch
-      const response = await api.get(`/api/user/activity?limit=3&_t=${Date.now()}`);
-      // Dispatch a global event that components can listen for
-      const refreshEvent = new CustomEvent('activitiesRefreshed', {
-        detail: { activities: response.data.activities || [] }
-      });
-      document.dispatchEvent(refreshEvent);
-      return response.data.activities || [];
-    } catch (error) {
-      console.error('Failed to refresh activities:', error);
-      return [];
-    }
-  },
-  
-  // Get activity details with full analytics
-  async getActivityWithAnalytics(activityId: string) {
-    try {
-      const response = await api.get(`/api/user/activity/${activityId}/analytics`);
-      return response.data || null;
-    } catch (error) {
-      console.error('Failed to fetch activity analytics:', error);
-      return null;
     }
   }
-};
 
-// Make sure to export both the named and default export
-export { activityService };
-export default activityService;
+  async getWeeklyActivities(): Promise<any[]> {
+    try {
+      const response = await api.get('/api/user/activity/stats?period=week');
+      return response.data.activities || [];
+    } catch (error) {
+      console.error('Error fetching weekly activities:', error);
+      return [];
+    }
+  }
+}
+
+export const activityService = new ActivityService();

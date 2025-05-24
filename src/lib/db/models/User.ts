@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -127,28 +126,30 @@ userSchema.methods.comparePassword = async function(candidatePassword: string) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to update user streak - only when user performs meaningful activities
+// Method to update user streak - ONLY when user performs meaningful activities (not just login)
 userSchema.methods.updateStreak = async function() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const lastStreakDate = new Date(this.lastStreakUpdate || this.lastLogin);
+  const lastStreakDate = new Date(this.lastStreakUpdate);
   lastStreakDate.setHours(0, 0, 0, 0);
   
   const diffTime = today.getTime() - lastStreakDate.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
-  // Only update streak based on actual activity, not just login
-  if (diffDays === 1) {
-    // If last activity was yesterday, increase streak
+  // Only update streak for same day or consecutive days, and only for meaningful activities
+  if (diffDays === 0) {
+    // Same day, don't change streak
+    return this;
+  } else if (diffDays === 1) {
+    // Next day with activity, increase streak
     this.streak += 1;
     this.lastStreakUpdate = today;
   } else if (diffDays > 1) {
-    // If last activity was more than a day ago, reset streak to 1
+    // Gap in activity, reset streak to 1
     this.streak = 1;
     this.lastStreakUpdate = today;
   }
-  // If diffDays === 0, same day, don't change streak
   
   return this.save();
 };
