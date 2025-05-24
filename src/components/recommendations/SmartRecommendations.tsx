@@ -13,14 +13,11 @@ import {
   ExternalLink,
   Sparkles,
   Target,
-  Award,
-  Filter,
-  Refresh
+  Award
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { recommendationService, SmartRecommendation, RecommendationContext } from '../../services/recommendation.service';
 import { activityService } from '../../services/activity.service';
-import { toast } from 'react-hot-toast';
 
 interface SmartRecommendationsProps {
   className?: string;
@@ -36,129 +33,41 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('SmartRecommendations component mounted');
     if (user) {
-      console.log('User found, loading recommendations for:', user.fullName);
       loadRecommendations();
-    } else {
-      console.log('No user found');
     }
   }, [user, selectedCategory]);
 
   const loadRecommendations = async () => {
-    if (!user) {
-      console.log('No user available for recommendations');
-      return;
-    }
+    if (!user) return;
     
-    console.log('Starting to load recommendations...');
     setIsLoading(true);
-    setError(null);
-    
     try {
       // Build recommendation context
-      console.log('Fetching recent activities...');
       const recentActivities = await activityService.getWeeklyActivities();
-      console.log('Recent activities:', recentActivities);
-      
       const context: RecommendationContext = {
-        recentActivities: recentActivities || [],
+        recentActivities,
         studyHistory: [],
         timeOfDay: getTimeOfDay(),
         semester: user.semester || 1,
         department: user.department || 'CSE'
       };
 
-      console.log('Recommendation context:', context);
-      console.log('Calling recommendation service...');
-      
       const recs = await recommendationService.getPersonalizedRecommendations(context);
-      console.log('Received recommendations:', recs);
       
       // Filter by category if selected
       const filteredRecs = selectedCategory === 'all' 
         ? recs 
         : recs.filter(rec => rec.type === selectedCategory);
       
-      console.log('Filtered recommendations:', filteredRecs);
-      
-      if (filteredRecs.length === 0) {
-        console.log('No recommendations found, generating fallback');
-        // Generate some fallback recommendations
-        const fallbackRecs = generateFallbackRecommendations(context);
-        setRecommendations(fallbackRecs.slice(0, maxRecommendations));
-      } else {
-        setRecommendations(filteredRecs.slice(0, maxRecommendations));
-      }
-      
-      toast.success(`Found ${filteredRecs.length} personalized recommendations!`);
+      setRecommendations(filteredRecs.slice(0, maxRecommendations));
     } catch (error) {
       console.error('Error loading recommendations:', error);
-      setError('Failed to load recommendations');
-      
-      // Generate fallback recommendations on error
-      const context: RecommendationContext = {
-        recentActivities: [],
-        studyHistory: [],
-        timeOfDay: getTimeOfDay(),
-        semester: user.semester || 1,
-        department: user.department || 'CSE'
-      };
-      const fallbackRecs = generateFallbackRecommendations(context);
-      setRecommendations(fallbackRecs);
-      
-      toast.error('Using offline recommendations');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const generateFallbackRecommendations = (context: RecommendationContext): SmartRecommendation[] => {
-    console.log('Generating fallback recommendations');
-    return [
-      {
-        id: 'fallback-1',
-        title: `${context.department} Semester ${context.semester} Study Guide`,
-        description: 'Comprehensive study materials for your current semester and department',
-        type: 'study_path',
-        confidence: 0.8,
-        reasoning: 'Tailored to your current academic level and department',
-        estimatedTime: '45-60 minutes',
-        difficulty: 'intermediate',
-        tags: [context.department.toLowerCase(), `semester-${context.semester}`, 'study-guide'],
-        popularity: 150,
-        aiGenerated: true
-      },
-      {
-        id: 'fallback-2',
-        title: 'Popular Resources This Week',
-        description: 'Most viewed and downloaded resources by students in your department',
-        type: 'trending',
-        confidence: 0.75,
-        reasoning: 'High engagement from peers in similar courses',
-        estimatedTime: '30-45 minutes',
-        difficulty: 'beginner',
-        tags: ['trending', 'popular', context.department.toLowerCase()],
-        popularity: 89,
-        aiGenerated: false
-      },
-      {
-        id: 'fallback-3',
-        title: 'AI-Curated Learning Path',
-        description: 'Personalized study sequence based on your learning patterns',
-        type: 'ai_suggested',
-        confidence: 0.9,
-        reasoning: 'AI analysis of successful learning patterns for students like you',
-        estimatedTime: '60-90 minutes',
-        difficulty: 'advanced',
-        tags: ['ai-generated', 'personalized', 'learning-path'],
-        popularity: 234,
-        aiGenerated: true
-      }
-    ];
   };
 
   const getTimeOfDay = (): string => {
@@ -172,16 +81,9 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
     try {
       await recommendationService.recordRecommendationFeedback(recommendationId, feedback);
       setFeedbackGiven(prev => new Set([...prev, recommendationId]));
-      toast.success('Thanks for your feedback!');
     } catch (error) {
       console.error('Error recording feedback:', error);
-      toast.error('Failed to record feedback');
     }
-  };
-
-  const refreshRecommendations = () => {
-    toast.loading('Refreshing recommendations...');
-    loadRecommendations();
   };
 
   const getTypeIcon = (type: string) => {
@@ -211,19 +113,10 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
     }
   };
 
-  if (!user) {
-    return (
-      <div className={`${className} bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border`}>
-        <div className="text-center py-8">
-          <Brain className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Please log in to see personalized recommendations</p>
-        </div>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
-    <div className={`${className} bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700`}>
+    <div className={`${className}`}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
           <Sparkles className="h-6 w-6 text-purple-600" />
@@ -235,54 +128,38 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
           </span>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={refreshRecommendations}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Refresh recommendations"
-          >
-            <Refresh className="h-4 w-4" />
-          </button>
-          
-          <div className="flex space-x-1">
-            {[
-              { key: 'all', label: 'All', icon: BookOpen },
-              { key: 'trending', label: 'Trending', icon: TrendingUp },
-              { key: 'ai_suggested', label: 'AI', icon: Brain },
-              { key: 'study_path', label: 'Path', icon: Target }
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setSelectedCategory(key)}
-                className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedCategory === key
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
+        <div className="flex space-x-2">
+          {[
+            { key: 'all', label: 'All', icon: BookOpen },
+            { key: 'trending', label: 'Trending', icon: TrendingUp },
+            { key: 'ai_suggested', label: 'AI', icon: Brain },
+            { key: 'study_path', label: 'Path', icon: Target }
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setSelectedCategory(key)}
+              className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                selectedCategory === key
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
       </div>
-
-      {error && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-800 text-sm">{error}</p>
-        </div>
-      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, index) => (
-            <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 animate-pulse">
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded mb-3"></div>
-              <div className="h-16 bg-gray-200 dark:bg-gray-600 rounded mb-4"></div>
+            <div key={index} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
+              <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
               <div className="flex space-x-2">
-                <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded flex-1"></div>
-                <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded flex-1"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
               </div>
             </div>
           ))}
@@ -293,15 +170,9 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             No recommendations yet
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-gray-500 dark:text-gray-400">
             Start exploring resources to get personalized recommendations!
           </p>
-          <button
-            onClick={refreshRecommendations}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Generate Recommendations
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -313,7 +184,7 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-all duration-200 hover:border-purple-300"
+                className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
@@ -371,8 +242,22 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
                   )}
                 </div>
 
+                {/* Tags */}
+                {rec.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {rec.tags.slice(0, 3).map((tag, tagIndex) => (
+                      <span 
+                        key={tagIndex}
+                        className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {/* Actions */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-600">
+                <div className="flex items-center justify-between">
                   <div className="flex space-x-2">
                     {!feedbackGiven.has(rec.id) ? (
                       <>
@@ -399,20 +284,38 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
                     )}
                   </div>
                   
-                  <div className="flex items-center space-x-1">
-                    {Array(5).fill(0).map((_, i) => (
-                      <Star 
-                        key={i} 
-                        className={`h-3 w-3 ${
-                          i < Math.round(rec.confidence * 5) 
-                            ? 'text-yellow-400 fill-current' 
-                            : 'text-gray-300'
-                        }`} 
-                      />
-                    ))}
-                    <span className="text-xs text-gray-500 ml-1">
-                      {Math.round(rec.confidence * 100)}%
-                    </span>
+                  {rec.url && (
+                    <a
+                      href={rec.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center space-x-1 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                    >
+                      <span>Explore</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+
+                {/* Confidence indicator */}
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Relevance</span>
+                    <div className="flex items-center space-x-1">
+                      {Array(5).fill(0).map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`h-3 w-3 ${
+                            i < Math.round(rec.confidence * 5) 
+                              ? 'text-yellow-400 fill-current' 
+                              : 'text-gray-300'
+                          }`} 
+                        />
+                      ))}
+                      <span className="text-xs text-gray-500 ml-1">
+                        {Math.round(rec.confidence * 100)}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               </motion.div>

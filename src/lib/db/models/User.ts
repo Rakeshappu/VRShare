@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -88,10 +87,6 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  lastActivityDate: {
-    type: Date,
-    default: null,
-  },
   lastLogin: {
     type: Date,
     default: Date.now,
@@ -127,43 +122,25 @@ userSchema.methods.comparePassword = async function(candidatePassword: string) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to update user streak based on actual activity (not just login)
-userSchema.methods.updateStreakOnActivity = async function() {
+// Method to update user streak
+userSchema.methods.updateStreak = async function() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  // Check if user already had activity today
-  if (this.lastActivityDate) {
-    const lastActivityDate = new Date(this.lastActivityDate);
-    lastActivityDate.setHours(0, 0, 0, 0);
-    
-    // If already had activity today, don't update streak
-    if (today.getTime() === lastActivityDate.getTime()) {
-      return this;
-    }
-    
-    const diffTime = today.getTime() - lastActivityDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) {
-      // If last activity was yesterday, increase streak
-      this.streak += 1;
-    } else if (diffDays > 1) {
-      // If last activity was more than a day ago, reset streak
-      this.streak = 1;
-    }
-  } else {
-    // First activity ever
+  const lastLoginDate = new Date(this.lastLogin);
+  lastLoginDate.setHours(0, 0, 0, 0);
+  
+  const diffTime = Math.abs(today.getTime() - lastLoginDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 1) {
+    // If last login was yesterday, increase streak
+    this.streak += 1;
+  } else if (diffDays > 1) {
+    // If last login was more than a day ago, reset streak
     this.streak = 1;
   }
   
-  this.lastActivityDate = new Date();
-  return this.save();
-};
-
-// Method to update user streak (legacy - only for login)
-userSchema.methods.updateStreak = async function() {
-  // Only update lastLogin, don't touch streak
   this.lastLogin = new Date();
   return this.save();
 };
