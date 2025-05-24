@@ -48,38 +48,40 @@ export const deleteResource = async (resourceId: string) => {
   }
 };
 
-/**
- * Check database connection
- * @returns Promise with database status
- */
+// Check database connection status
 export const checkDatabaseConnection = async () => {
   try {
-    // For development, make a direct call to the database status endpoint
-    const baseURL = import.meta.env.MODE === 'development' 
-      ? 'http://localhost:3000' 
-      : window.location.origin;
-      
-    const response = await fetch(`${baseURL}/api/db/status`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Database connection check failed with status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data;
+    const response = await api.get('/api/db/status');
+    return response.data;
   } catch (error) {
-    console.error('Failed to check database connection:', error);
-    // Return a structured error response
-    return { 
-      connected: false, 
-      message: error instanceof Error ? error.message : 'Unknown error', 
-      error 
-    };
+    console.error('Error checking database connection:', error);
+    return { connected: false, error: (error as Error).message };
+  }
+};
+export const getResources = async (params: {
+  page?: number;
+  limit?: number;
+  type?: string;
+  semester?: number;
+  search?: string;
+  sortOrder?: 'asc' | 'desc';
+}) => {
+  try {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page.toString());
+    if (params.limit) query.append('limit', params.limit.toString());
+    if (params.type) query.append('type', params.type);
+    if (params.semester) query.append('semester', params.semester.toString());
+    if (params.search) query.append('search', params.search);
+    if (params.sortOrder) query.append('sortOrder', params.sortOrder);
+
+    const endpoint = `/api/resources?${query.toString()}`;
+    const response = await api.get(endpoint);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching resources:', error);
+    toast.error('Failed to fetch resources');
+    throw error;
   }
 };
 
@@ -88,7 +90,10 @@ const resourceService = {
   fetchStudyMaterials,
   createResource,
   deleteResource,
-  checkDatabaseConnection
+  checkDatabaseConnection,
+  getResources,
 };
+
+
 
 export default resourceService;

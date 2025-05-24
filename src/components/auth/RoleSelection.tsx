@@ -2,6 +2,7 @@
 import { UserRole } from '../../types/auth';
 import { GraduationCap, Users, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import cropped from '../../assets/cropped.png'
 
 interface RoleSelectionProps {
   onRoleSelect: (role: UserRole) => void;
@@ -46,7 +47,8 @@ export const RoleSelection = ({ onRoleSelect }: RoleSelectionProps) => {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <Share2 className="h-14 w-14 text-indigo-600" />
+            {/* <Share2 className="h-14 w-14 text-indigo-600" /> */}
+            <span><img src={cropped} alt="logo" className="h-20 w-30"/></span>
             <span className="ml-2 text-4xl font-bold text-indigo-600">VersatileShare</span>
           </motion.div>
           <h2 className="text-3xl font-extrabold text-gray-900">

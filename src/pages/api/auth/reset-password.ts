@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -23,7 +23,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await connectDB();
 
     const { email, code, newPassword } = req.body;
-    console.log('Password reset request:', { email, codeProvided: !!code, passwordLength: newPassword?.length });
 
     if (!email || !code || !newPassword) {
       return res.status(400).json({ error: 'Email, verification code, and new password are required' });
@@ -40,14 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'No account found with that email address' });
     }
 
-    console.log('User found for password reset:', {
-      email: user.email,
-      storedCode: user.verificationCode,
-      providedCode: code,
-      codeExpiry: user.verificationCodeExpiry,
-      currentTime: new Date()
-    });
-
     // Check if the code is valid and not expired
     if (!user.verificationCode || user.verificationCode !== code) {
       return res.status(400).json({ error: 'Invalid verification code' });
@@ -57,23 +48,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Verification code has expired' });
     }
 
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-    // Update the user's password and clear verification fields
-    user.password = hashedPassword;
+    // Hash the new password directly (the pre-save hook will handle hashing)
+    user.password = newPassword;
+    
+    // Clear verification data
     user.verificationCode = undefined;
     user.verificationCodeExpiry = undefined;
     
-    console.log('Saving new password for user:', user.email);
+    // Save the user which will trigger the password hashing in the pre-save hook
     await user.save();
-    
+
     console.log('Password reset successful for user:', email);
-    
+
     return res.status(200).json({ success: true, message: 'Password has been successfully reset' });
   } catch (error) {
     console.error('Reset password error:', error);
-    return res.status(500).json({ error: 'Failed to reset password', details: String(error) });
+    return res.status(500).json({ error: 'Failed to reset password' });
   }
 }

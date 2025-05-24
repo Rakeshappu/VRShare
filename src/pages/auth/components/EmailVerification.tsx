@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../../../services/auth.service';
@@ -8,9 +9,10 @@ import { toast } from 'react-hot-toast';
 export const EmailVerification = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { setError } = useAuth();
+  const authContext = useAuth();
   const [otp, setOtp] = useState('');
   const email = location.state?.email;
+  const role = location.state?.role;
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,14 +22,17 @@ export const EmailVerification = () => {
       console.log('Submitting OTP verification:', { email, otp }); 
       await authService.verifyOTP(email, otp);
       toast.success('Email verified successfully');
-      navigate('/auth/login');
+      
+      // For admin role, redirect to admin approval pending page after email verification
+      if (role === 'admin') {
+        navigate('/auth/admin-approval-pending', { state: { email: email } });
+      } else {
+        // For students and faculty, navigate to login
+        navigate('/auth/login');
+      }
     } catch (err: any) {
       console.error('OTP verification failed:', err);
-      if (setError) {
-        setError(err.message);
-      } else {
-        console.error('Error:', err.message);
-      }
+      console.error('Error:', err.message);
       toast.error(err.message || 'Failed to verify email');
     } finally {
       setIsLoading(false);
@@ -39,19 +44,12 @@ export const EmailVerification = () => {
       await authService.resendOTP(email);
       toast.success('OTP resent successfully');
     } catch (err: any) {
-      if (setError) {
-        setError(err.message);
-      } else {
-        console.error('Error:', err.message);
-      }
+      console.error('Error:', err.message);
       toast.error(err.message || 'Failed to resend OTP');
+      navigate('/auth/signup');
+      return null;
     }
   };
-
-  if (!email) {
-    navigate('/auth/signup');
-    return null;
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

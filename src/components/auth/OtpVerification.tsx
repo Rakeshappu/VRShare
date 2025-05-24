@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -114,8 +113,8 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
         }
       } else {
         // For email verification flow
-        if (verifyOTP) {
-          await verifyOTP(email, otpString);
+        const response = await authService.verifyOTP(email, otpString, 'emailVerification');
+        if (response.success) {
           toast.success('Email verified successfully');
           navigate('/dashboard');
         }
@@ -169,7 +168,7 @@ export const OtpVerification = ({ email, onResendOtp, purpose = 'emailVerificati
   };
 
   const goToLogin = () => {
-    navigate('/auth/login');
+    navigate('/');
   };
 
   return (

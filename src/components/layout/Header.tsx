@@ -1,5 +1,5 @@
 import { Search, Bell, LogOut, Settings, UserCircle, SunMoon, Loader } from 'lucide-react';
-import  {useAuth}  from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { generateText } from '../../services/openai.service';
@@ -34,7 +34,7 @@ export const Header = () => {
   
   useEffect(() => {
     if (user) {
-      setAvatarUrl(getAvatar());
+      setAvatarUrl(getAvatar() || '');
     }
   }, [user]);
   
@@ -219,7 +219,7 @@ export const Header = () => {
   };
   
   const getAvatar = () => {
-    if (!user) return null;
+    if (!user) return '';
     
     if (user.avatar) {
       return `${user.avatar}?t=${lastUpdate}`;
