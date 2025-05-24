@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -34,25 +35,18 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    console.log('SmartRecommendations: Component mounted, user:', user);
     if (user) {
       loadRecommendations();
     }
   }, [user, selectedCategory]);
 
   const loadRecommendations = async () => {
-    if (!user) {
-      console.log('SmartRecommendations: No user found');
-      return;
-    }
+    if (!user) return;
     
-    console.log('SmartRecommendations: Loading recommendations for user:', user.email);
     setIsLoading(true);
     try {
       // Build recommendation context
       const recentActivities = await activityService.getWeeklyActivities();
-      console.log('SmartRecommendations: Recent activities:', recentActivities);
-      
       const context: RecommendationContext = {
         recentActivities,
         studyHistory: [],
@@ -61,19 +55,16 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
         department: user.department || 'CSE'
       };
 
-      console.log('SmartRecommendations: Context:', context);
       const recs = await recommendationService.getPersonalizedRecommendations(context);
-      console.log('SmartRecommendations: Got recommendations:', recs);
       
       // Filter by category if selected
       const filteredRecs = selectedCategory === 'all' 
         ? recs 
         : recs.filter(rec => rec.type === selectedCategory);
       
-      console.log('SmartRecommendations: Filtered recommendations:', filteredRecs);
       setRecommendations(filteredRecs.slice(0, maxRecommendations));
     } catch (error) {
-      console.error('SmartRecommendations: Error loading recommendations:', error);
+      console.error('Error loading recommendations:', error);
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +82,7 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
       await recommendationService.recordRecommendationFeedback(recommendationId, feedback);
       setFeedbackGiven(prev => new Set([...prev, recommendationId]));
     } catch (error) {
-      console.error('SmartRecommendations: Error recording feedback:', error);
+      console.error('Error recording feedback:', error);
     }
   };
 
@@ -122,21 +113,10 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
     }
   };
 
-  if (!user) {
-    console.log('SmartRecommendations: No user, returning null');
-    return null;
-  }
-
-  console.log('SmartRecommendations: Rendering with', recommendations.length, 'recommendations, loading:', isLoading);
+  if (!user) return null;
 
   return (
     <div className={`${className}`}>
-      {/* Debug info */}
-      <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
-        <p>Debug: {recommendations.length} recommendations loaded, isLoading: {isLoading.toString()}</p>
-        <p>User: {user?.fullName} | Semester: {user?.semester} | Department: {user?.department}</p>
-      </div>
-
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
           <Sparkles className="h-6 w-6 text-purple-600" />
@@ -185,20 +165,14 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
           ))}
         </div>
       ) : recommendations.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
+        <div className="text-center py-12">
           <Brain className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Getting your recommendations ready...
+            No recommendations yet
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-gray-500 dark:text-gray-400">
             Start exploring resources to get personalized recommendations!
           </p>
-          <button 
-            onClick={loadRecommendations}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Refresh Recommendations
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

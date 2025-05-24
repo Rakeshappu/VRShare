@@ -3,34 +3,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '../../../lib/db/connect';
 import { Resource } from '../../../lib/db/models/Resource';
 import { Activity } from '../../../lib/db/models/Activity';
-import jwt from 'jsonwebtoken';
-
-interface ActivityData {
-  _id: string;
-  count: number;
-  uniqueUsers: number;
-  lastActivity: Date;
-}
-
-interface ResourceWithStats {
-  _id: string;
-  title: string;
-  description: string;
-  type: string;
-  subject: string;
-  semester: number;
-  department: string;
-  uploadedBy: any;
-  createdAt: Date;
-  stats: {
-    views: number;
-    downloads: number;
-    likes: number;
-    uniqueUsers: number;
-    lastActivity: Date;
-    score: number;
-  };
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -40,112 +12,111 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await connectDB();
 
-    const { semester, department, limit = 10 } = req.query;
+    const { semester, department, limit = '8', timeframe = '7' } = req.query;
 
-    // Get current user context if available
-    let userContext = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
-        userContext = decoded;
-      } catch (error) {
-        // Continue without user context
-      }
-    }
+    // Calculate trending resources based on recent activity
+    const timeframeMs = parseInt(timeframe as string) * 24 * 60 * 60 * 1000;
+    const cutoffDate = new Date(Date.now() - timeframeMs);
 
-    // Build match criteria
-    const matchCriteria: any = {};
-    if (semester) {
-      matchCriteria.semester = parseInt(semester as string);
-    }
-    if (department) {
-      matchCriteria.department = department as string;
-    }
-
-    // Get trending activity data from the last 7 days
-    const trendingActivities = await Activity.aggregate([
+    // Build activity aggregation pipeline
+    const activityPipeline: any[] = [
       {
         $match: {
-          timestamp: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-          type: { $in: ['view', 'download', 'like'] },
-          resource: { $ne: null }
+          timestamp: { $gte: cutoffDate },
+          type: { $in: ['view', 'download', 'like'] }
         }
       },
       {
         $group: {
           _id: '$resource',
-          count: { $sum: 1 },
+          views: {
+            $sum: { $cond: [{ $eq: ['$type', 'view'] }, 1, 0] }
+          },
+          downloads: {
+            $sum: { $cond: [{ $eq: ['$type', 'download'] }, 1, 0] }
+          },
+          likes: {
+            $sum: { $cond: [{ $eq: ['$type', 'like'] }, 1, 0] }
+          },
           uniqueUsers: { $addToSet: '$user' },
           lastActivity: { $max: '$timestamp' }
         }
       },
       {
         $addFields: {
-          uniqueUsers: { $size: '$uniqueUsers' }
+          trendingScore: {
+            $add: [
+              { $multiply: ['$views', 1] },
+              { $multiply: ['$downloads', 3] },
+              { $multiply: ['$likes', 2] },
+              { $multiply: [{ $size: '$uniqueUsers' }, 1.5] }
+            ]
+          }
         }
       },
       {
         $match: {
-          count: { $gte: 2 } // At least 2 interactions
+          trendingScore: { $gte: 2 } // Minimum activity threshold
         }
       },
       {
-        $sort: { count: -1, uniqueUsers: -1 }
+        $sort: { trendingScore: -1 }
       },
       {
         $limit: parseInt(limit as string) * 2 // Get more to filter later
       }
-    ]);
+    ];
+
+    const trendingActivities = await Activity.aggregate(activityPipeline);
+
+    if (trendingActivities.length === 0) {
+      return res.status(200).json({ resources: [], trending: true });
+    }
 
     // Get resource details
-    const resourceIds = trendingActivities.map((activity: ActivityData) => activity._id);
-    let resourceQuery: any = {
-      _id: { $in: resourceIds }
-    };
-
-    // Add semester/department filters to resource query
+    const resourceIds = trendingActivities.map(activity => activity._id).filter(id => id);
+    
+    // Build resource filter
+    const resourceFilter: any = { _id: { $in: resourceIds } };
+    
     if (semester) {
-      resourceQuery.semester = parseInt(semester as string);
+      resourceFilter.semester = parseInt(semester as string);
     }
+    
     if (department) {
-      resourceQuery.department = department as string;
+      resourceFilter.department = department;
     }
 
-    const resources = await Resource.find(resourceQuery)
+    const resources = await Resource.find(resourceFilter)
       .populate('uploadedBy', 'fullName')
       .lean();
 
-    // Combine resources with their trending stats
-    const trendingResources: ResourceWithStats[] = resources.map((resource: any) => {
-      const activity = trendingActivities.find((a: ActivityData) => a._id.toString() === resource._id.toString());
+    // Combine resource data with trending metrics
+    const trendingResources = resources.map(resource => {
+      const activity = trendingActivities.find(a => 
+        a._id && a._id.toString() === resource._id.toString()
+      );
       
-      // Calculate trending score
-      const views = activity?.count || 0;
-      const uniqueUsers = activity?.uniqueUsers || 0;
-      const recency = activity?.lastActivity ? (Date.now() - new Date(activity.lastActivity).getTime()) / (1000 * 60 * 60) : 168; // hours ago, default to 1 week
-      const score = (views * 2 + uniqueUsers * 5) / Math.max(1, recency / 24); // Boost recent activity
-
       return {
         ...resource,
-        stats: {
-          views,
-          downloads: 0, // Could be calculated separately if needed
-          likes: 0, // Could be calculated separately if needed
-          uniqueUsers,
-          lastActivity: activity?.lastActivity || resource.createdAt,
-          score
+        trending: {
+          score: activity?.trendingScore || 0,
+          views: activity?.views || 0,
+          downloads: activity?.downloads || 0,
+          likes: activity?.likes || 0,
+          uniqueUsers: activity?.uniqueUsers?.length || 0,
+          lastActivity: activity?.lastActivity
         }
       };
     });
 
     // Sort by trending score
-    trendingResources.sort((a: ResourceWithStats, b: ResourceWithStats) => b.stats.score - a.stats.score);
+    trendingResources.sort((a, b) => (b.trending.score || 0) - (a.trending.score || 0));
 
     return res.status(200).json({
       resources: trendingResources.slice(0, parseInt(limit as string)),
-      total: trendingResources.length,
+      trending: true,
+      timeframe: `${timeframe} days`,
       timestamp: new Date()
     });
   } catch (error) {

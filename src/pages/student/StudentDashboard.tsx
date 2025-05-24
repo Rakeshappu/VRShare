@@ -115,7 +115,7 @@ const StudentDashboard = () => {
               value={streak.toString()}
               icon={<Award className="h-8 w-8 text-yellow-500" />}
               color="yellow"
-              description="days of learning"
+              description="days in a row"
             />
           </motion.div>
           
@@ -150,7 +150,7 @@ const StudentDashboard = () => {
           </motion.div>
         </div>
         
-        {/* Smart Recommendations Section - Make sure it's visible */}
+        {/* Smart Recommendations Section */}
         <motion.div 
           className="mb-8"
           variants={fadeIn}
@@ -158,22 +158,7 @@ const StudentDashboard = () => {
           animate="visible"
           transition={{ delay: 0.3 }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center mb-6">
-              <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-2 rounded-lg mr-3">
-                <BookOpen className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                  🚀 Smart Recommendations
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  AI-powered suggestions tailored for you
-                </p>
-              </div>
-            </div>
-            <SmartRecommendations maxRecommendations={6} />
-          </div>
+          <SmartRecommendations maxRecommendations={6} />
         </motion.div>
         
         {/* Charts and Activity */}

@@ -1,172 +1,312 @@
-
-import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import { FormField } from '../../../components/auth/FormField';
-import { GoogleLoginButton } from '../../../components/auth/GoogleLoginButton';
-import { authService } from '../../../services/auth.service';
-import { toast } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { LogIn } from 'lucide-react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { OtpVerification } from '../../../components/auth/OtpVerification'; // Import OTP component
+// Import logo from the correct path
+import cropped from '../../../../public/uploads/cropped.png';
 
-interface LoginFormProps {
-  onToggleForm: () => void;
-  onForgotPassword: () => void;
-}
-
-export const LoginForm: React.FC<LoginFormProps> = ({ onToggleForm, onForgotPassword }) => {
-  const navigate = useNavigate();
+export const LoginForm = () => {
+  const { login, error, clearError } = useAuth(); 
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showOtpVerification, setShowOtpVerification] = useState(false); // Add state for OTP verification
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  // Check for saved credentials on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedPassword = localStorage.getItem('rememberedPassword');
+    const rememberedFlag = localStorage.getItem('rememberMe');
+    
+    if (savedEmail && savedPassword && rememberedFlag === 'true') {
+      setFormData({
+        email: savedEmail,
+        password: savedPassword
+      });
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
+    setLoading(true);
+    clearError();
+    
+    // Save or clear credentials based on remember me checkbox
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', formData.email);
+      localStorage.setItem('rememberedPassword', formData.password);
+      localStorage.setItem('rememberMe', 'true');
+    } else {
+      localStorage.removeItem('rememberedEmail');
+      localStorage.removeItem('rememberedPassword');
+      localStorage.removeItem('rememberMe');
+    }
+    
     try {
-      console.log('Attempting login with:', formData.email);
-      const response = await authService.login(formData.email, formData.password);
-      
-      if (response.success && response.user) {
-        console.log('Login successful, user role:', response.user.role);
-        toast.success('Login successful!');
-        
-        // Navigate based on role
-        switch (response.user.role) {
-          case 'student':
-            navigate('/student/dashboard');
-            break;
-          case 'faculty':
-            navigate('/faculty/dashboard');
-            break;
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-          default:
-            navigate('/');
-        }
+      await login(formData.email, formData.password);
+      toast.success('Login successful! Welcome back.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      // Show friendly error messages
+      if (err.response && err.response.status === 401) {
+        toast.error('Incorrect email or password. Please try again.');
+      } else if (err.message) {
+        toast.error(err.message);
       } else {
-        toast.error(response.error || 'Login failed');
+        toast.error('Login failed. Please try again later.');
       }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Login failed');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+    
+    setResetLoading(true);
+    try {
+      // Use authService instead of direct fetch
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: forgotEmail,
+          purpose: 'resetPassword' 
+        }),
+      });
+      
+      if (response.ok) {
+        await response.json();
+        toast.success('Password reset code sent to your email');
+        // Show OTP verification instead of going back to login
+        setShowOtpVerification(true);
+        setShowForgotPassword(false);
+      } else {
+        // Handle non-JSON responses better
+        let errorMessage = 'Failed to process password reset request';
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (jsonError) {
+          // If response isn't valid JSON, use status text
+          errorMessage = `Error: ${response.statusText || 'Server error'}`;
+        }
+        toast.error(errorMessage);
+      }
+    } catch (err) {
+      console.error('Forgot password error:', err);
+      toast.error('Failed to send password reset. Please try again later.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  // Handle OTP resend
+  const handleResendOtp = async () => {
+    try {
+      setResetLoading(true);
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: forgotEmail,
+          purpose: 'resetPassword' 
+        }),
+      });
+      
+      if (response.ok) {
+        toast.success('New verification code sent to your email');
+      } else {
+        toast.error('Failed to resend verification code');
+      }
+    } catch (err) {
+      console.error('Resend OTP error:', err);
+      toast.error('Failed to resend verification code');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  // Render OTP verification if active
+  if (showOtpVerification) {
+    return (
+      <OtpVerification 
+        email={forgotEmail} 
+        onResendOtp={handleResendOtp} 
+        purpose="resetPassword" 
+      />
+    );
+  }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-      className="w-full"
-    >
-      <div className="text-center mb-8">
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center">
-            <span className="text-white text-2xl font-bold">RS</span>
-          </div>
-        </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-        <p className="text-gray-600">Sign in to access your resources</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <FormField
-          icon={<Mail className="h-5 w-5" />}
-          type="email"
-          name="email"
-          placeholder="Email address"
-          value={formData.email}
-          onChange={handleInputChange}
-          required
-        />
-
-        <div className="relative">
-          <FormField
-            icon={<Lock className="h-5 w-5" />}
-            type={showPassword ? 'text' : 'password'}
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleInputChange}
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <label className="flex items-center">
-            <input type="checkbox" className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
-            <span className="ml-2 text-sm text-gray-600">Remember me</span>
-          </label>
-          <button
-            type="button"
-            onClick={onForgotPassword}
-            className="text-sm text-indigo-600 hover:text-indigo-500"
-          >
-            Forgot password?
-          </button>
-        </div>
-
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-          type="submit"
-          disabled={isLoading}
-          className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-        >
-          {isLoading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-          ) : (
-            <>
-              Sign In
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </>
-          )}
-        </motion.button>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
-          </div>
-        </div>
-
-        <GoogleLoginButton />
-
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl"
+      >
         <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <button
-              type="button"
-              onClick={onToggleForm}
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              Sign up
-            </button>
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex items-center justify-center mb-6"
+          >
+            <span><img src={cropped} alt="logo" className="h-20 w-30"/></span>
+            <span className="ml-2 text-3xl font-bold text-indigo-600">VersatileShare</span>
+          </motion.div>
+          
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            Welcome back
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Sign in to access your account
           </p>
         </div>
-      </form>
-    </motion.div>
+
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="bg-red-50 border-l-4 border-red-400 p-4 rounded"
+          >
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {showForgotPassword ? (
+          <motion.form 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mt-8 space-y-6"
+            onSubmit={handleForgotPassword}
+          >
+            <FormField
+              label="Email"
+              name="email"
+              type="email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+            />
+            
+            <div className="flex flex-col space-y-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={resetLoading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300 transition-all duration-200"
+              >
+                {resetLoading ? 'Sending...' : 'Send Reset Instructions'}
+              </motion.button>
+              
+              <button 
+                type="button" 
+                onClick={() => setShowForgotPassword(false)}
+                className="text-sm text-indigo-600 hover:text-indigo-500"
+              >
+                Back to Login
+              </button>
+            </div>
+          </motion.form>
+        ) : (
+          <motion.form 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mt-8 space-y-6" 
+            onSubmit={handleSubmit}
+          >
+            <FormField
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+
+            <FormField
+              label="Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            />
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
+              </div>
+
+              <div className="text-sm">
+                <button 
+                  type="button" 
+                  onClick={() => setShowForgotPassword(true)} 
+                  className="font-medium text-indigo-600 hover:text-indigo-500"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300 transition-all duration-200"
+            >
+              <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+                <LogIn className="h-5 w-5 text-indigo-300" />
+              </span>
+              {loading ? 'Signing in...' : 'Sign in'}
+            </motion.button>
+
+            <div className="text-sm text-center pt-4">
+              <Link to="/auth/role" className="font-medium text-indigo-600 hover:text-indigo-500">
+                Don't have an account? Sign up
+              </Link>
+            </div>
+          </motion.form>
+        )}
+      </motion.div>
+    </div>
   );
 };
