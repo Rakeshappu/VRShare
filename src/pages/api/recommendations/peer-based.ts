@@ -6,6 +6,36 @@ import { Activity } from '../../../lib/db/models/Activity';
 import { User } from '../../../lib/db/models/User';
 import jwt from 'jsonwebtoken';
 
+interface ActivityData {
+  _id: string;
+  count: number;
+  users: string[];
+  lastActivity: Date;
+}
+
+interface ResourceData {
+  _id: string;
+  title: string;
+  description: string;
+  type: string;
+  subject: string;
+  semester: number;
+}
+
+interface RecommendationData {
+  resourceId: string;
+  title: string;
+  description: string;
+  type: string;
+  subject: string;
+  resource: ResourceData;
+  peerCount: number;
+  totalInteractions: number;
+  similarity: number;
+  lastActivity: Date;
+  tags: string[];
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -78,14 +108,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
 
     // Get the actual resource details
-    const resourceIds = popularActivities.map(activity => activity._id);
+    const resourceIds = popularActivities.map((activity: ActivityData) => activity._id);
     const resources = await Resource.find({
       _id: { $in: resourceIds }
     }).populate('uploadedBy', 'fullName');
 
     // Combine activity data with resource details
-    const recommendations = resources.map(resource => {
-      const activity = popularActivities.find(a => a._id.toString() === resource._id.toString());
+    const recommendations: RecommendationData[] = resources.map((resource: ResourceData) => {
+      const activity = popularActivities.find((a: ActivityData) => a._id.toString() === resource._id.toString());
       
       return {
         resourceId: resource._id,
@@ -103,7 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Sort by peer count and similarity
-    recommendations.sort((a, b) => {
+    recommendations.sort((a: RecommendationData, b: RecommendationData) => {
       const scoreA = a.peerCount * a.similarity;
       const scoreB = b.peerCount * b.similarity;
       return scoreB - scoreA;

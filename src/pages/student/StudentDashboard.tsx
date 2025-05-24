@@ -150,7 +150,7 @@ const StudentDashboard = () => {
           </motion.div>
         </div>
         
-        {/* Smart Recommendations Section */}
+        {/* Smart Recommendations Section - Made more prominent */}
         <motion.div 
           className="mb-8"
           variants={fadeIn}
@@ -158,7 +158,13 @@ const StudentDashboard = () => {
           animate="visible"
           transition={{ delay: 0.3 }}
         >
-          <SmartRecommendations maxRecommendations={6} />
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white flex items-center">
+              <BookOpen className="mr-2 h-5 w-5 text-indigo-600" />
+              Personalized Recommendations
+            </h2>
+            <SmartRecommendations maxRecommendations={6} />
+          </div>
         </motion.div>
         
         {/* Charts and Activity */}

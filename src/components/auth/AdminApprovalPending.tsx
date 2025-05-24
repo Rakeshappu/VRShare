@@ -10,6 +10,7 @@ export const AdminApprovalPending = ({ email }: { email: string }) => {
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+  const [manualRedirect, setManualRedirect] = useState(false);
   
   useEffect(() => {
     // Fetch count of admin users pending approval
@@ -52,6 +53,16 @@ export const AdminApprovalPending = ({ email }: { email: string }) => {
   const startRedirectCountdown = () => {
     toast.success('Redirecting to login page in 15 seconds');
     setRedirectCountdown(15);
+  };
+
+  // Handle manual navigation to login - prevent any immediate redirects
+  const handleBackToLogin = () => {
+    console.log('Manual back to login clicked');
+    setManualRedirect(true);
+    // Small delay to ensure this component shows before navigation
+    setTimeout(() => {
+      navigate('/auth/login');
+    }, 100);
   };
 
   return (
@@ -111,8 +122,9 @@ export const AdminApprovalPending = ({ email }: { email: string }) => {
         
         <div className="pt-4 flex space-x-4">
           <button
-            onClick={() => navigate('/auth/login')}
-            className="flex-1 flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            onClick={handleBackToLogin}
+            disabled={manualRedirect}
+            className="flex-1 flex items-center justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to login

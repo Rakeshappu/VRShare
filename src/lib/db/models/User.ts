@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -91,6 +92,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  lastStreakUpdate: {
+    type: Date,
+    default: Date.now,
+  },
   notifications: [{
     message: String,
     resourceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Resource' },
@@ -122,26 +127,29 @@ userSchema.methods.comparePassword = async function(candidatePassword: string) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to update user streak
+// Method to update user streak - only when user performs meaningful activities
 userSchema.methods.updateStreak = async function() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const lastLoginDate = new Date(this.lastLogin);
-  lastLoginDate.setHours(0, 0, 0, 0);
+  const lastStreakDate = new Date(this.lastStreakUpdate || this.lastLogin);
+  lastStreakDate.setHours(0, 0, 0, 0);
   
-  const diffTime = Math.abs(today.getTime() - lastLoginDate.getTime());
+  const diffTime = today.getTime() - lastStreakDate.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
+  // Only update streak based on actual activity, not just login
   if (diffDays === 1) {
-    // If last login was yesterday, increase streak
+    // If last activity was yesterday, increase streak
     this.streak += 1;
+    this.lastStreakUpdate = today;
   } else if (diffDays > 1) {
-    // If last login was more than a day ago, reset streak
+    // If last activity was more than a day ago, reset streak to 1
     this.streak = 1;
+    this.lastStreakUpdate = today;
   }
+  // If diffDays === 0, same day, don't change streak
   
-  this.lastLogin = new Date();
   return this.save();
 };
 
