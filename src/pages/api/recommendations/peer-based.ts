@@ -78,14 +78,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
 
     // Get the actual resource details
-    const resourceIds = popularActivities.map((activity: any) => activity._id);
+    const resourceIds = popularActivities.map(activity => activity._id);
     const resources = await Resource.find({
       _id: { $in: resourceIds }
     }).populate('uploadedBy', 'fullName');
 
     // Combine activity data with resource details
-    const recommendations = resources.map((resource: any) => {
-      const activity = popularActivities.find((a: any) => a._id.toString() === resource._id.toString());
+    const recommendations = resources.map(resource => {
+      const activity = popularActivities.find(a => a._id.toString() === resource._id.toString());
       
       return {
         resourceId: resource._id,
@@ -103,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Sort by peer count and similarity
-    recommendations.sort((a: any, b: any) => {
+    recommendations.sort((a, b) => {
       const scoreA = a.peerCount * a.similarity;
       const scoreB = b.peerCount * b.similarity;
       return scoreB - scoreA;

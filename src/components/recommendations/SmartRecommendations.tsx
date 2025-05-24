@@ -13,8 +13,7 @@ import {
   ExternalLink,
   Sparkles,
   Target,
-  Award,
-  RefreshCw
+  Award
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { recommendationService, SmartRecommendation, RecommendationContext } from '../../services/recommendation.service';
@@ -129,36 +128,26 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
           </span>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={loadRecommendations}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-            title="Refresh recommendations"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          
-          <div className="flex space-x-2">
-            {[
-              { key: 'all', label: 'All', icon: BookOpen },
-              { key: 'trending', label: 'Trending', icon: TrendingUp },
-              { key: 'ai_suggested', label: 'AI', icon: Brain },
-              { key: 'study_path', label: 'Path', icon: Target }
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setSelectedCategory(key)}
-                className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedCategory === key
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
+        <div className="flex space-x-2">
+          {[
+            { key: 'all', label: 'All', icon: BookOpen },
+            { key: 'trending', label: 'Trending', icon: TrendingUp },
+            { key: 'ai_suggested', label: 'AI', icon: Brain },
+            { key: 'study_path', label: 'Path', icon: Target }
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setSelectedCategory(key)}
+              className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                selectedCategory === key
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
       </div>
 

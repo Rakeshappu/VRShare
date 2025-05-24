@@ -8,7 +8,7 @@ import { LoginForm } from './components/LoginForm';
 import { AdminApprovalPendingPage } from './AdminApprovalPendingPage';
 import { useAuth } from '../../contexts/AuthContext';
 
-const AuthPage = () => {
+export const AuthPage = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -37,5 +37,3 @@ const AuthPage = () => {
     </Routes>
   );
 };
-
-export default AuthPage;
